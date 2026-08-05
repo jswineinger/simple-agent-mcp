@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment / secrets
+chatbot.env
+*.env
+!*.env.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+# DEBUG_JSON forensic log (chatbot/app.py) — already covered by *.log above,
+# named explicitly since it can contain planted payloads / doc splices / demo
+# sink strings and must never be committed.
+chatbot/debug_json.log*
+
+# Internal ops runbook — real VM users/paths/SSH-key names, not for the
+# public repo. Kept locally for reference; untracked via `git rm --cached`.
+skills/mcp-lab-state.md

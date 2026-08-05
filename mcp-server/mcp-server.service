@@ -1,0 +1,17 @@
+[Unit]
+Description=MCP Server (mcp-lab)
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=mcpsvc
+WorkingDirectory=/home/mcpsvc/mcp-lab/mcp-server
+ExecStart=/home/mcpsvc/mcp-lab/mcp-server/venv/bin/python3 mcp_server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
