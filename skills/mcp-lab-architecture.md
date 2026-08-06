@@ -17,14 +17,14 @@ Everything in the app is designed around that comparison: identical UI and ident
 
 ```
 ┌────────────────────────────────────┐        ┌──────────────────────────────┐
-│  Chatbot (Flask, app.py)            │  SSH   │  mcphost                     │
-│                                      │ stdio  │  mcp_server.py (MCP server)  │
-│  ┌────────────────────────────────┐ │──────▶ │  10 tools (see §5)           │
-│  │ MCPRegistry                     │ │◀────── │                              │
-│  │  ├─ MCPClient      → mcphost    │ │        │  Ollama / qwen2.5:14b        │
-│  │  └─ HTTPMCPClient  → dlptest    │ │        └──────────────────────────────┘
-│  └────────────────────────────────┘ │
-│         │ HTTPS (JSON-RPC 2.0)       │
+│  Chatbot (Flask, app.py)            │ JSON-  │  mcphost                     │
+│                                      │ RPC/   │  mcp_server.py (MCP server)  │
+│  ┌────────────────────────────────┐ │ HTTP   │  10 tools (see §5)           │
+│  │ MCPRegistry                     │ │ Bearer │                              │
+│  │  ├─ HTTPMCPClient  → mcphost    │ │ auth   │                              │
+│  │  └─ HTTPMCPClient  → dlptest    │ │──────▶ │  Ollama / qwen2.5:14b        │
+│  └────────────────────────────────┘ │◀────── │                              │
+│         │ HTTPS (JSON-RPC 2.0)       │        └──────────────────────────────┘
 │         ▼                            │
 │  ┌──────────────┐  public MCP server │
 │  │  dlptest.com  │  (DLP test tools) │
@@ -47,7 +47,7 @@ Everything in the app is designed around that comparison: identical UI and ident
                                                upstream in this lab)
 ```
 
-**Key architectural fact for anyone designing new features:** the MCP tool calls (chatbot → mcphost via SSH, chatbot → dlptest via HTTPS) happen **directly, never through FAIG.** FAIG only ever sits in the LLM request/response leg. It only "sees" a tool's *result* indirectly, and only in FAIG modes, because the result gets re-injected into `messages[]` on the *next* LLM call and FAIG re-scans the full resent history. Tool-call *arguments* going out to a tool are never inspected by FAIG in this architecture — a real gap worth knowing about if you're designing anything that assumes gateway coverage of tool calls. See `faig-scanner-findings.md` for the full write-up of what this gap enabled in testing.
+**Key architectural fact for anyone designing new features:** the MCP tool calls (chatbot → mcphost via bearer-authenticated HTTP JSON-RPC, chatbot → dlptest via HTTPS) happen **directly, never through FAIG.** FAIG only ever sits in the LLM request/response leg. It only "sees" a tool's *result* indirectly, and only in FAIG modes, because the result gets re-injected into `messages[]` on the *next* LLM call and FAIG re-scans the full resent history. Tool-call *arguments* going out to a tool are never inspected by FAIG in this architecture — a real gap worth knowing about if you're designing anything that assumes gateway coverage of tool calls. See `faig-scanner-findings.md` for the full write-up of what this gap enabled in testing.
 
 ---
 
@@ -98,7 +98,7 @@ One of four shapes, discriminated by the UI on `blocked` / `validation_failed` /
 
 Two backends, fronted by `MCPRegistry` (`chatbot/mcp_registry.py`), which namespaces every tool `"<server>__<tool>"` so the two backends can never collide and `tools_used` in the response shows which backend actually served a call.
 
-### mcphost backend (SSH stdio → `mcp_server.py`)
+### mcphost backend (JSON-RPC 2.0 over HTTP, bearer auth → `mcp_server.py`)
 
 | Tool | Purpose | Category |
 |------|---------|----------|
@@ -159,7 +159,8 @@ These aren't bugs — they're deliberate simplicity trade-offs for a lab — but
 - **No server-side session/conversation store.** The client resends the full message history every turn; the server is otherwise stateless per request (except the in-memory `DOC_SPLICES` dict, which has no eviction and won't survive a restart or scale past one process).
 - **No multi-user/auth model.** Single shared chatbot instance, no per-user identity, no isolation between concurrent users beyond the per-request `request_id`.
 - **No streaming.** Every response is a single blocking JSON reply; the UI shows a "thinking" dots indicator, not token-by-token output.
-- **MCP transport is synchronous, per-call SSH** to mcphost (~200-500ms handshake per tool call) — fine for a lab, would need a persistent-connection redesign to scale.
+- **MCP transport is synchronous, per-call HTTP POST** to mcphost (a fresh `requests.post` per tool call, no connection pooling/keep-alive tuning) — no SSH handshake cost anymore, but still one blocking round-trip per call; fine for a lab, would need a persistent-connection/async redesign to scale further.
+- **mcphost's only auth is a single shared bearer token** (`MCP_AUTH_TOKEN`, checked in `mcp_server.py` before any method dispatch) — no per-client identity, no rotation mechanism, sent in cleartext unless the transport is upgraded to HTTPS. Adequate for a single-chatbot lab; a real multi-client deployment would want per-client tokens and TLS.
 - **FAIG scanner latency vs. ingress timeout** is a live tension: heavier AI Guard scanner sets on tool-laden requests can exceed FAIG's ingress `proxy_read_timeout` (60s default), producing a 504 that has nothing to do with the LLM itself. Any feature that adds more round-trips per turn (more tools, bigger context) makes this worse.
 - **Tool calls never traverse FAIG directly** (see §2) — a structural gap, not a bug, but central to any new tool-related feature or scanning-coverage discussion.
 

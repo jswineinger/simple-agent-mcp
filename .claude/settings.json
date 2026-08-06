@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py --version)",
+      "Bash(MCP_AUTH_TOKEN=testtoken123 MCP_SERVER_PORT=8765 MCP_SERVER_HOST=127.0.0.1 /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/mcp-server/mcp_server.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8765/mcp -H \"Content-Type: application/json\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8765/mcp -H \"Authorization: Bearer wrong\" -H \"Content-Type: application/json\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}')",
+      "Bash(curl -s http://127.0.0.1:8765/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1\"}}}')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' http://127.0.0.1:8765/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}')",
+      "Bash(curl -s http://127.0.0.1:8765/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}')",
+      "Bash(curl -s http://127.0.0.1:8765/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"get_system_info\",\"arguments\":{}}}')",
+      "Bash(/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv/Scripts/pip install *)",
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv"
+    ]
+  }
+}

@@ -13,7 +13,9 @@
 #   2. Generate a GitHub SSH deploy key and wait for you to add it
 #   3. Clone the mcp-lab repo
 #   4. Create Python venv for the MCP server
-#   5. Install and enable the systemd service
+#   5. Generate mcp-server.env with a bearer-token secret (copy this token
+#      into MCP_AUTH_TOKEN in chatbot.env on the chatbot VM)
+#   6. Install and enable the systemd service
 
 set -euo pipefail
 
@@ -31,7 +33,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[1/5] Installing system packages..."
 sudo apt-get update -q
-sudo apt-get install -y python3 python3-pip python3-venv git openssh-client curl -q
+sudo apt-get install -y python3 python3-pip python3-venv git openssh-client curl openssl -q
 echo "  Done."
 
 # ---------------------------------------------------------------------------
@@ -113,9 +115,33 @@ python3 -m venv "${SERVER_DIR}/venv"
 echo "  Venv ready."
 
 # ---------------------------------------------------------------------------
-# 5. Systemd service
+# 5. mcp-server.env — bearer-token auth
 # ---------------------------------------------------------------------------
-echo "[5/5] Installing mcp-server systemd service..."
+echo "[5/6] Setting up mcp-server.env..."
+ENV_FILE="${SERVER_DIR}/mcp-server.env"
+if [ ! -f "${ENV_FILE}" ]; then
+    cp "${SERVER_DIR}/mcp-server.env.example" "${ENV_FILE}"
+    TOKEN="$(openssl rand -hex 32)"
+    sed -i "s|^MCP_AUTH_TOKEN=.*|MCP_AUTH_TOKEN=${TOKEN}|" "${ENV_FILE}"
+    echo ""
+    echo "  ╔══════════════════════════════════════════════════════════════╗"
+    echo "  ║  ACTION REQUIRED — Copy this token to the chatbot VM         ║"
+    echo "  ╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  Generated MCP_AUTH_TOKEN: ${TOKEN}"
+    echo ""
+    echo "  Set the SAME value as MCP_AUTH_TOKEN in chatbot.env on the"
+    echo "  chatbot VM (192.168.2.132) — see setup-chatbot-vm.sh."
+    echo ""
+    read -rp "  Press Enter once you've copied the token..."
+else
+    echo "  mcp-server.env already exists — skipping (token unchanged)."
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Systemd service
+# ---------------------------------------------------------------------------
+echo "[6/6] Installing mcp-server systemd service..."
 sudo cp "${SERVER_DIR}/mcp-server.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable mcp-server.service
@@ -137,8 +163,9 @@ echo "=== Setup complete ==="
 echo ""
 echo "  Logs : sudo journalctl -u mcp-server -f"
 echo ""
-echo "  Self-test:"
-echo "    echo '{\"method\":\"tools/list\"}' | \\"
-echo "      ${SERVER_DIR}/venv/bin/python3 ${SERVER_DIR}/mcp_server.py"
+echo "  Self-test (replace TOKEN with the value from mcp-server.env):"
+echo "    curl -s http://localhost:8765/mcp \\"
+echo "      -H 'Authorization: Bearer TOKEN' -H 'Content-Type: application/json' \\"
+echo "      -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'"
 echo ""
 echo "  Next: run setup-chatbot-vm.sh on the chatbot VM (192.168.2.132)"

@@ -29,10 +29,8 @@ Config via environment variables:
     HOST / PORT        bind address              default: 0.0.0.0 / 8000
     VERIFY_TLS         verify TLS certs          default: false
 
-    MCP_HOST           MCP server hostname/IP    default: 192.168.37.6
-    MCP_USER           SSH user on MCP server    default: mcpsvc
-    MCP_SCRIPT         path to mcp_server.py     default: /home/mcpsvc/mcp-lab/...
-    MCP_PYTHON         python path on remote     default: venv alongside script
+    MCP_SERVER_URL     mcphost MCP endpoint      default: http://192.168.37.6:8765/mcp
+    MCP_AUTH_TOKEN     bearer token for mcphost  default: (none — required, see below)
 
     DLPTEST_MCP_URL    public dlptest MCP URL    default: https://mcp.dlptest.com/api/mcp/
     DLPTEST_ENABLED    enable the dlptest backend default: true
@@ -51,7 +49,6 @@ from logging.handlers import RotatingFileHandler
 import requests
 from flask import Flask, Response, jsonify, request, send_file
 
-from mcp_client import MCPClient
 from mcp_http_client import HTTPMCPClient
 from mcp_registry import MCPRegistry
 from doc_reader import extract_text, build_rag_turn, ExtractionError
@@ -172,10 +169,8 @@ HOST              = os.getenv("HOST",                "0.0.0.0")
 PORT              = int(os.getenv("PORT",            "8000"))
 VERIFY_TLS        = os.getenv("VERIFY_TLS",          "false").lower() in ("1", "true", "yes", "on")
 
-MCP_HOST   = os.getenv("MCP_HOST",   "192.168.37.6")
-MCP_USER   = os.getenv("MCP_USER",   "mcpsvc")
-MCP_SCRIPT = os.getenv("MCP_SCRIPT", "/home/mcpsvc/mcp-lab/mcp-server/mcp_server.py")
-MCP_PYTHON = os.getenv("MCP_PYTHON", "/home/mcpsvc/mcp-lab/mcp-server/venv/bin/python3")
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://192.168.37.6:8765/mcp")
+MCP_AUTH_TOKEN = os.getenv("MCP_AUTH_TOKEN", "")
 
 # Public MCP server (dlptest) — real JSON-RPC 2.0 over Streamable HTTP. The
 # dlptest.com/mcp page is documentation only; the live JSON-RPC endpoint is
@@ -231,13 +226,18 @@ def looks_blocked(mode, status, text):
 # ---------------------------------------------------------------------------
 backends = {}
 
-logger.info(f"Initializing MCP backend 'mcphost' → {MCP_USER}@{MCP_HOST}")
+logger.info(f"Initializing MCP backend 'mcphost' → {MCP_SERVER_URL}")
+if not MCP_AUTH_TOKEN:
+    logger.warning(
+        "MCP_AUTH_TOKEN is not set — mcphost requires bearer auth on every "
+        "request, so this backend will fail to connect until it's configured."
+    )
 try:
-    backends["mcphost"] = MCPClient(
-        server_host=MCP_HOST,
-        server_script=MCP_SCRIPT,
-        ssh_user=MCP_USER,
-        python_bin=MCP_PYTHON
+    backends["mcphost"] = HTTPMCPClient(
+        url=MCP_SERVER_URL,
+        name="mcphost",
+        timeout=MCP_HTTP_TIMEOUT,
+        auth_header=f"Bearer {MCP_AUTH_TOKEN}" if MCP_AUTH_TOKEN else None
     )
 except Exception as e:
     logger.warning(f"mcphost MCP backend unavailable: {e} — continuing without it")
@@ -1007,7 +1007,7 @@ if __name__ == "__main__":
     logger.info(f"Direct Public  : {PUBLIC_LLM_URL}  model={PUBLIC_MODEL}")
     logger.info(f"FAIG           : {FAIG_URL}")
     logger.info(f"FAIG validation : enabled={FAIG_VALIDATION_ENABLED} header={FAIG_VALIDATION_HEADER}")
-    logger.info(f"MCP mcphost  : {MCP_USER}@{MCP_HOST}  reachable={'mcphost' in backends}")
+    logger.info(f"MCP mcphost  : {MCP_SERVER_URL}  reachable={'mcphost' in backends}")
     logger.info(f"MCP dlptest    : {DLPTEST_MCP_URL}  enabled={DLPTEST_ENABLED}  reachable={'dlptest' in backends}")
     logger.info(f"MCP total      : available={MCP_AVAILABLE}  tools={len(mcp.tool_names()) if mcp else 0}")
     app.run(host=HOST, port=PORT, debug=False)

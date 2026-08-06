@@ -13,8 +13,10 @@ above returns a normal `application/json` initialize response). The server
 runs in stateless mode — no `Mcp-Session-Id` response header is sent — but
 this client still captures and replays one if a server ever sets it.
 
-Public API mirrors mcp_client.py's MCPClient so mcp_registry.py can treat
-both backends identically:
+Also used, with a different URL and a bearer token via `auth_header`, for
+the mcphost backend (mcp_server.py) — both backends speak the same wire
+protocol, so this one class serves both; mcp_registry.py treats every
+backend identically:
     .tools                        → list of raw {"name","description","inputSchema"}
     .call_tool(name, arguments)   → str
 """

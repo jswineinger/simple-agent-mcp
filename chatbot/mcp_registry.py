@@ -1,9 +1,10 @@
 """
 mcp_registry.py — multi-backend MCP router for mcp-lab
 
-Fronts N MCP backends (currently: mcphost over SSH/stdio via MCPClient,
-dlptest over Streamable HTTP via HTTPMCPClient) behind the single surface
-app.py already consumes: get_tool_definitions() / run_tool_loop() /
+Fronts N MCP backends (currently: mcphost and dlptest, both real JSON-RPC
+2.0 MCP over HTTP via HTTPMCPClient — mcphost additionally requires a
+bearer token, see mcp_http_client.py's auth_header) behind the single
+surface app.py already consumes: get_tool_definitions() / run_tool_loop() /
 call_tool(). Each tool the model sees is namespaced as "<server>__<tool>"
 so a name collision between backends can't happen and tools_used shows
 which server actually served a call.
@@ -15,7 +16,7 @@ construction block); this registry itself just assumes every backend
 handed to it is already connected.
 
 --- Threat-model note (why this matters for reading lab results) ---
-The chatbot invokes MCP tools DIRECTLY — SSH to mcphost, HTTPS to
+The chatbot invokes MCP tools DIRECTLY — HTTP(S) to mcphost, HTTPS to
 dlptest. These tool calls do not traverse FortiAIGate; FAIG only sits in
 the LLM request path. So FAIG only ever sees a tool's *result*, and only
 because it re-enters messages[] on the NEXT LLM call in the FAIG modes —

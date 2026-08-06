@@ -3,11 +3,25 @@
 mcp_server.py — MCP Server for mcp-lab
 Runs on mcphost (192.168.37.6)
 
-Transport : stdio
+Transport : JSON-RPC 2.0 over HTTP (Streamable HTTP, stateless), one POST
+            endpoint at /mcp. Bearer-token auth required on every request —
+            see MCP_AUTH_TOKEN below. Mirrors the client already used for the
+            dlptest backend (chatbot/mcp_http_client.py) so both MCP
+            backends the chatbot talks to speak the same real MCP wire
+            protocol; only the URL/token differ per backend.
 Start     : python3 mcp_server.py
 Service   : see mcp-server.service
 
-The chatbot on 192.168.2.132 launches this as a remote subprocess over SSH.
+Config via environment variables:
+    MCP_SERVER_HOST   bind address              default: 0.0.0.0
+    MCP_SERVER_PORT   bind port                 default: 8765
+    MCP_AUTH_TOKEN    shared bearer token        required — no default.
+                      The server refuses to start without one (fail closed;
+                      see __main__ below). Chatbot must send it as
+                      "Authorization: Bearer <token>" — see MCP_AUTH_TOKEN
+                      in chatbot/chatbot.env.example.
+
+The chatbot on 192.168.2.132 calls this over the network as an MCP client.
 This server is LLM-agnostic — it executes tools and returns JSON results
 regardless of which LLM the chatbot is talking to.
 
@@ -36,6 +50,9 @@ Deps beyond stdlib: requests, beautifulsoup4 (fetch_url only) — see requiremen
 
 import ipaddress
 import json
+import logging
+import os
+import secrets
 import socket
 import sys
 import platform
@@ -45,6 +62,13 @@ from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
+from flask import Flask, jsonify, request
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -520,43 +544,105 @@ def dispatch(name: str, arguments: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# stdio transport
+# JSON-RPC 2.0 over HTTP transport (Streamable HTTP, stateless — one POST
+# endpoint). Mirrors the wire format chatbot/mcp_http_client.py already
+# speaks to the dlptest backend, so the chatbot uses the SAME client class
+# (HTTPMCPClient) for both MCP backends — only the URL and bearer token
+# differ. See module docstring above for env vars.
 # ---------------------------------------------------------------------------
 
-def send(obj: dict):
-    sys.stdout.write(json.dumps(obj) + "\n")
-    sys.stdout.flush()
+MCP_SERVER_HOST = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
+MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "8765"))
+MCP_AUTH_TOKEN  = os.getenv("MCP_AUTH_TOKEN", "")
+
+PROTOCOL_VERSION = "2025-06-18"
+
+app = Flask(__name__)
 
 
-def main():
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            msg = json.loads(line)
-        except json.JSONDecodeError:
-            send({"error": "invalid JSON"})
-            continue
+def _rpc_result_body(req_id, result: dict) -> dict:
+    return {"jsonrpc": "2.0", "id": req_id, "result": result}
 
-        method = msg.get("method")
 
-        if method == "tools/list":
-            send({"tools": TOOLS})
+def _rpc_error_body(req_id, code: int, message: str) -> dict:
+    return {"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}}
 
-        elif method == "tools/call":
-            params    = msg.get("params", {})
-            name      = params.get("name", "")
-            arguments = params.get("arguments", {})
-            result    = dispatch(name, arguments)
-            send({"content": [{"type": "text", "text": json.dumps(result)}]})
 
-        elif method == "ping":
-            send({"pong": True})
+def _authorized(req) -> bool:
+    """
+    Timing-safe bearer-token check. Every request to /mcp must carry
+    'Authorization: Bearer <MCP_AUTH_TOKEN>' — this is the ONLY auth this
+    server has; SSH's implicit key-based auth is gone now that the
+    transport is plain HTTP, so this check gates every method, including
+    'initialize' and 'tools/list'. MCP_AUTH_TOKEN is guaranteed non-empty
+    here because __main__ refuses to start the server without one.
+    """
+    expected = f"Bearer {MCP_AUTH_TOKEN}"
+    got = req.headers.get("Authorization", "")
+    return secrets.compare_digest(got, expected)
 
-        else:
-            send({"error": f"Unknown method: {method}"})
+
+@app.route("/mcp", methods=["POST"])
+def mcp_endpoint():
+    if not _authorized(request):
+        logger.warning(f"Rejected unauthorized request from {request.remote_addr}")
+        return jsonify(_rpc_error_body(None, -32001, "Unauthorized")), 401
+
+    try:
+        msg = request.get_json(force=True, silent=False)
+    except Exception:
+        return jsonify(_rpc_error_body(None, -32700, "Parse error: invalid JSON")), 400
+
+    if not isinstance(msg, dict):
+        return jsonify(_rpc_error_body(None, -32600, "Invalid Request")), 400
+
+    req_id          = msg.get("id")
+    method          = msg.get("method", "")
+    params          = msg.get("params") or {}
+    is_notification = "id" not in msg
+
+    if method == "initialize":
+        result = {
+            "protocolVersion": PROTOCOL_VERSION,
+            "capabilities":    {"tools": {}},
+            "serverInfo":      {"name": "mcp-lab-mcphost", "version": "1.0"},
+        }
+        return jsonify(_rpc_result_body(req_id, result))
+
+    if method == "notifications/initialized":
+        # Notification — client (HTTPMCPClient) never reads this body.
+        return ("", 204)
+
+    if method == "tools/list":
+        return jsonify(_rpc_result_body(req_id, {"tools": TOOLS}))
+
+    if method == "tools/call":
+        name      = params.get("name", "")
+        arguments = params.get("arguments", {})
+        logger.info(f"Tool call: {name}({arguments})")
+        result    = dispatch(name, arguments)
+        return jsonify(_rpc_result_body(
+            req_id, {"content": [{"type": "text", "text": json.dumps(result)}]}
+        ))
+
+    if method == "ping":
+        return jsonify(_rpc_result_body(req_id, {"pong": True}))
+
+    if is_notification:
+        return ("", 204)
+    return jsonify(_rpc_error_body(req_id, -32601, f"Unknown method: {method}")), 404
 
 
 if __name__ == "__main__":
-    main()
+    if not MCP_AUTH_TOKEN:
+        logger.error(
+            "MCP_AUTH_TOKEN is not set — refusing to start unauthenticated. "
+            "Set it in mcp-server.env (copy from mcp-server.env.example), "
+            "then restart."
+        )
+        sys.exit(1)
+    logger.info(
+        f"mcp_server listening on {MCP_SERVER_HOST}:{MCP_SERVER_PORT}/mcp "
+        f"— {len(TOOLS)} tools, auth required"
+    )
+    app.run(host=MCP_SERVER_HOST, port=MCP_SERVER_PORT)

@@ -7,6 +7,7 @@ Wants=ollama.service
 Type=simple
 User=mcpsvc
 WorkingDirectory=/home/mcpsvc/mcp-lab/mcp-server
+EnvironmentFile=-/home/mcpsvc/mcp-lab/mcp-server/mcp-server.env
 ExecStart=/home/mcpsvc/mcp-lab/mcp-server/venv/bin/python3 mcp_server.py
 Restart=on-failure
 RestartSec=5
