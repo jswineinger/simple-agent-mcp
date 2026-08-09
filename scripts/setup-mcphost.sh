@@ -5,7 +5,7 @@
 # Bootstrap — this script must be downloaded before the repo exists.
 # Grab it directly from GitHub:
 #
-#   curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-chatbot-and-mcp-server/main/scripts/setup-mcphost.sh \
+#   curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-agent-mcp/main/scripts/setup-mcphost.sh \
 #     -o setup-mcphost.sh && bash setup-mcphost.sh
 #
 # What this does:
@@ -20,7 +20,7 @@
 set -euo pipefail
 
 GITHUB_USER="jswineinger"
-GITHUB_REPO="simple-chatbot-and-mcp-server"   # actual GitHub repo slug
+GITHUB_REPO="simple-agent-mcp"                # actual GitHub repo slug
 LOCAL_DIR_NAME="mcp-lab"                      # local clone dir name — kept
                                                # short; must match the paths
                                                # baked into *.service files

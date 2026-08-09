@@ -107,13 +107,13 @@ need to exist yet.
 ### 1 — mcphost (do this first)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-chatbot-and-mcp-server/main/scripts/setup-mcphost.sh \
+curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-agent-mcp/main/scripts/setup-mcphost.sh \
   -o setup-mcphost.sh && bash setup-mcphost.sh
 ```
 
 The script will:
 - Generate a GitHub deploy key and pause for you to add it at
-  `github.com/jswineinger/simple-chatbot-and-mcp-server/settings/keys`
+  `github.com/jswineinger/simple-agent-mcp/settings/keys`
 - Clone the repo to `~/mcp-lab`
 - Create the Python venv
 - Generate `mcp-server.env` with a random bearer token and pause so you can
@@ -130,7 +130,7 @@ curl -s http://localhost:8765/mcp \
 ### 2 — agent VM (192.168.2.132)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-chatbot-and-mcp-server/main/scripts/setup-agent-vm.sh \
+curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-agent-mcp/main/scripts/setup-agent-vm.sh \
   -o setup-agent-vm.sh && bash setup-agent-vm.sh
 ```
 
