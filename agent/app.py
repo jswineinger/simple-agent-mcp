@@ -3,23 +3,30 @@
 MCP Lab — Secure Chat client
 =============================
 
-Extends the FortiAIGate Lab chatbot with MCP (Model Context Protocol) support.
+Extends the FortiAIGate Lab agent with MCP (Model Context Protocol) support.
 The browser talks to THIS app; this app relays each turn to the model through
 FortiAIGate (or directly to Ollama/Anthropic in Direct mode).
 
     [ browser UI ] --local--> [ this Flask app ] --> [ FortiAIGate ] --> [ Ollama ]
                                       |          \--> [ Ollama direct  ]
                                       |          \--> [ Anthropic direct ]
-                                 [ MCP client ] --> [ MCP server on mcphost ]
+                                 [ MCP client ] --> [ mcp-server ]
 
 Mode + Flow combinations:
-    Direct  + Private  →  Ollama on mcphost (no proxy)
+    Direct  + Private  →  Ollama (no proxy)
     Direct  + Public   →  Anthropic API (no proxy)
     FAIG    + Private  →  FortiAIGate /private/chat/completions → Ollama
     FAIG    + Public   →  FortiAIGate /public/chat/completions  → Ollama
 
 Config via environment variables:
-    PRIVATE_LLM_URL    Ollama base URL          default: http://192.168.37.6:11434/v1
+    AGENT_IP           this box's own address    default: 127.0.0.1 (informational only)
+    MCPSERVER_IP       mcp-server's address       default: 127.0.0.1
+    MCP_SERVER_PORT    mcp-server's port          default: 8765
+    OLLAMA_URL         Ollama base URL            default: http://127.0.0.1:11434
+                       PRIVATE_LLM_URL and MCP_SERVER_URL below are derived
+                       from these four — not set directly. See "Topology"
+                       comment in agent.env.example.
+
     PUBLIC_LLM_URL     Anthropic base URL        default: https://api.anthropic.com/v1
     FAIG_URL           FortiAIGate base URL      default: https://192.168.2.131:30443/v1
     PRIVATE_MODEL      Ollama model name         default: qwen2.5:14b
@@ -29,8 +36,7 @@ Config via environment variables:
     HOST / PORT        bind address              default: 0.0.0.0 / 8000
     VERIFY_TLS         verify TLS certs          default: false
 
-    MCP_SERVER_URL     mcphost MCP endpoint      default: http://192.168.37.6:8765/mcp
-    MCP_AUTH_TOKEN     bearer token for mcphost  default: (none — required, see below)
+    MCP_AUTH_TOKEN     bearer token for mcp-server default: (none — required, see below)
 
     DLPTEST_MCP_URL    public dlptest MCP URL    default: https://mcp.dlptest.com/api/mcp/
     DLPTEST_ENABLED    enable the dlptest backend default: true
@@ -145,7 +151,21 @@ def _log_inbound_raw(request_id, mode, flow, chat_url, r):
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-PRIVATE_LLM_URL   = os.getenv("PRIVATE_LLM_URL",   "http://192.168.37.6:11434/v1").rstrip("/")
+
+# Topology — where the other two components live. AGENT_IP is informational
+# only (nothing here reads it back); MCPSERVER_IP/MCP_SERVER_PORT/OLLAMA_URL
+# feed the derived URLs just below. Defaults assume everything runs on one
+# box; splitting onto separate VMs is just replacing 127.0.0.1 with the real
+# IP here AND in mcp-server/mcp-server.env on the mcp-server host — see the
+# "Topology" comment in agent.env.example.
+AGENT_IP        = os.getenv("AGENT_IP", "127.0.0.1")
+MCPSERVER_IP    = os.getenv("MCPSERVER_IP", "127.0.0.1")
+MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "8765"))
+OLLAMA_URL      = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+
+PRIVATE_LLM_URL   = f"{OLLAMA_URL}/v1"
+MCP_SERVER_URL    = f"http://{MCPSERVER_IP}:{MCP_SERVER_PORT}/mcp"
+
 PUBLIC_LLM_URL    = os.getenv("PUBLIC_LLM_URL",     "https://api.anthropic.com/v1").rstrip("/")
 FAIG_URL          = os.getenv("FAIG_URL",            "https://192.168.2.131:30443/v1").rstrip("/")
 PRIVATE_MODEL     = os.getenv("PRIVATE_MODEL",       "qwen2.5:14b")
@@ -169,7 +189,6 @@ HOST              = os.getenv("HOST",                "0.0.0.0")
 PORT              = int(os.getenv("PORT",            "8000"))
 VERIFY_TLS        = os.getenv("VERIFY_TLS",          "false").lower() in ("1", "true", "yes", "on")
 
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://192.168.37.6:8765/mcp")
 MCP_AUTH_TOKEN = os.getenv("MCP_AUTH_TOKEN", "")
 
 # Public MCP server (dlptest) — real JSON-RPC 2.0 over Streamable HTTP. The
@@ -221,7 +240,7 @@ def looks_blocked(mode, status, text):
 # Each backend is constructed under its own try/except so one being down
 # never takes the other with it. Tool names the model sees are namespaced
 # "<server>__<tool>" by the registry (see mcp_registry.py's docstring for
-# why FAIG only ever sees a tool's *result*, never the chatbot→MCP call
+# why FAIG only ever sees a tool's *result*, never the agent→MCP call
 # itself, and only in FAIG modes).
 # ---------------------------------------------------------------------------
 backends = {}
@@ -277,7 +296,7 @@ class BlockedError(Exception):
 class ValidationKeyError(Exception):
     """
     FAIG API Key Validation rejected the request (only raised when the
-    chatbot itself attached a validation key — see call_llm). 403 is
+    agent itself attached a validation key — see call_llm). 403 is
     genuinely ambiguous with FAIG's "Alert & Deny" content-block verdicts;
     FAIG's Logs > Events/Traffic page is the source of truth for which
     actually occurred.

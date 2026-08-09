@@ -1,0 +1,17 @@
+[Unit]
+Description=MCP Lab Agent
+After=network.target
+
+[Service]
+Type=simple
+User=mcpsvc
+WorkingDirectory=/home/mcpsvc/mcp-lab/agent
+EnvironmentFile=/home/mcpsvc/mcp-lab/agent/agent.env
+ExecStart=/home/mcpsvc/mcp-lab/agent/venv/bin/python3 app.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

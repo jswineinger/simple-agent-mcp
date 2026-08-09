@@ -10,10 +10,41 @@
       "Bash(curl -s http://127.0.0.1:8765/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}')",
       "Bash(curl -s http://127.0.0.1:8765/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"get_system_info\",\"arguments\":{}}}')",
       "Bash(/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv/Scripts/pip install *)",
-      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv\")"
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv\")",
+      "Bash(git fetch *)",
+      "Bash(bash -n scripts/setup-mcphost.sh)",
+      "Bash(bash -n scripts/setup-chatbot-vm.sh)",
+      "Bash(MCP_AUTH_TOKEN=testtoken123 MCP_SERVER_PORT=8766 MCP_SERVER_HOST=127.0.0.1 OLLAMA_URL=http://127.0.0.1:1 /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv2/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/mcp-server/mcp_server.py)",
+      "Bash(curl -s http://127.0.0.1:8766/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}')",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([t['name'] for t in d['result']['tools']]\\)\")",
+      "Bash(curl -s http://127.0.0.1:8766/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"list_ollama_models\",\"arguments\":{}}}')",
+      "Bash(curl -s http://127.0.0.1:8766/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"get_gpu_status\",\"arguments\":{}}}')",
+      "Bash(MCP_AUTH_TOKEN=testtoken123 MCP_SERVER_PORT=8766 MCP_SERVER_HOST=127.0.0.1 OLLAMA_URL=http://127.0.0.1:11499 /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv2/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/mcp-server/mcp_server.py)",
+      "Bash(curl -s http://127.0.0.1:8766/mcp -H 'Authorization: Bearer testtoken123' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"list_ollama_models\",\"arguments\":{}}}')",
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_test_venv2\" \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/fake_ollama.py\")",
+      "Bash(git mv *)",
+      "Bash(python -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 python -c ' *)",
+      "Bash(bash -n scripts/setup-agent-vm.sh)",
+      "Bash(bash -n agent/run.sh)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('agent/app.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('mcp-server/mcp_server.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -m venv /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_server_venv)",
+      "Bash(MCP_AUTH_TOKEN=defaulttest /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_server_venv/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/mcp-server/mcp_server.py)",
+      "Bash(MCP_AUTH_TOKEN=defaulttest PORT=8001 /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/agent_venv/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/agent/app.py)",
+      "Bash(/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/agent_venv/Scripts/pip install *)",
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/agent_venv\")",
+      "Bash(python -m venv /c/tmp_agent_venv)",
+      "Bash(/c/tmp_agent_venv/Scripts/pip install *)",
+      "Bash(MCP_AUTH_TOKEN=defaulttest PORT=8001 /c/tmp_agent_venv/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/agent/app.py)",
+      "Bash(MCP_AUTH_TOKEN=splittest MCPSERVER_IP=127.0.0.1 MCP_SERVER_PORT=8766 OLLAMA_URL=http://127.0.0.1:11435 PORT=8002 DLPTEST_ENABLED=false /c/tmp_agent_venv/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/agent/app.py)",
+      "Bash(curl -s http://127.0.0.1:8766/mcp -H 'Authorization: Bearer splittest' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"list_ollama_models\",\"arguments\":{}}}')",
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_server_venv\" \\\\ *)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv"
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv",
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv2",
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_server_venv"
     ]
   }
 }

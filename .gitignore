@@ -14,7 +14,7 @@ venv/
 env/
 
 # Environment / secrets
-chatbot.env
+agent.env
 *.env
 !*.env.example
 
@@ -30,10 +30,10 @@ Thumbs.db
 
 # Logs
 *.log
-# DEBUG_JSON forensic log (chatbot/app.py) — already covered by *.log above,
+# DEBUG_JSON forensic log (agent/app.py) — already covered by *.log above,
 # named explicitly since it can contain planted payloads / doc splices / demo
 # sink strings and must never be committed.
-chatbot/debug_json.log*
+agent/debug_json.log*
 
 # Internal ops runbook — real VM users/paths/SSH-key names, not for the
 # public repo. Kept locally for reference; untracked via `git rm --cached`.

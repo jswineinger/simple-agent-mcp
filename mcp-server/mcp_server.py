@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 mcp_server.py — MCP Server for mcp-lab
-Runs on mcphost (192.168.37.6)
+Runs on whichever host MCPSERVER_IP (in agent.env) points at — by default
+the same box as the agent and Ollama; see the "Topology" comment in
+agent/agent.env.example for splitting them onto separate VMs.
 
 Transport : JSON-RPC 2.0 over HTTP (Streamable HTTP, stateless), one POST
             endpoint at /mcp. Bearer-token auth required on every request —
             see MCP_AUTH_TOKEN below. Mirrors the client already used for the
-            dlptest backend (chatbot/mcp_http_client.py) so both MCP
-            backends the chatbot talks to speak the same real MCP wire
+            dlptest backend (agent/mcp_http_client.py) so both MCP
+            backends the agent talks to speak the same real MCP wire
             protocol; only the URL/token differ per backend.
 Start     : python3 mcp_server.py
 Service   : see mcp-server.service
@@ -17,13 +19,25 @@ Config via environment variables:
     MCP_SERVER_PORT   bind port                 default: 8765
     MCP_AUTH_TOKEN    shared bearer token        required — no default.
                       The server refuses to start without one (fail closed;
-                      see __main__ below). Chatbot must send it as
+                      see __main__ below). Agent must send it as
                       "Authorization: Bearer <token>" — see MCP_AUTH_TOKEN
-                      in chatbot/chatbot.env.example.
+                      in agent/agent.env.example.
+    OLLAMA_URL        Ollama base URL            default: http://127.0.0.1:11434
+                      Used by list_ollama_models, which queries Ollama's
+                      REST API (GET /api/tags) rather than shelling out to a
+                      local `ollama` CLI — this server no longer assumes
+                      it's co-located with Ollama.
+    AGENT_IP          the agent's own address     default: 127.0.0.1
+                      Not read by this server — declared here purely so
+                      this file's env (mcp-server.env) shows the same
+                      3-host topology as agent.env. See MCPSERVER_IP below.
+    MCPSERVER_IP      this server's own address   default: 127.0.0.1
+                      Also not read here (the actual bind address is
+                      MCP_SERVER_HOST above) — same documentary purpose.
 
-The chatbot on 192.168.2.132 calls this over the network as an MCP client.
-This server is LLM-agnostic — it executes tools and returns JSON results
-regardless of which LLM the chatbot is talking to.
+The agent calls this over the network as an MCP client. This server is
+LLM-agnostic — it executes tools and returns JSON results regardless of
+which LLM the agent is talking to.
 
 Demo tools for FAIG MCP security scanning (always live, no env vars):
   - check_lab_license : returns a poisoned RESULT (prompt-injection payload)
@@ -57,7 +71,6 @@ import socket
 import sys
 import platform
 import subprocess
-import shutil
 from urllib.parse import urlparse
 
 import requests
@@ -82,8 +95,7 @@ TOOLS = [
         "description": (
             "Returns current system information for the mcphost host: "
             "hostname, OS, uptime, CPU, and memory. "
-            "Use when the user asks about the lab server, system status, "
-            "or the machine running the LLM."
+            "Use when the user asks about the lab server or system status."
         ),
         "inputSchema": {
             "type": "object",
@@ -145,19 +157,6 @@ TOOLS = [
                 }
             },
             "required": ["service"]
-        }
-    },
-    {
-        "name": "get_gpu_status",
-        "description": (
-            "Returns NVIDIA GPU status including model, memory usage, "
-            "temperature, and utilization percentage. Use when the user "
-            "asks about the GPU, VRAM, or graphics card on mcphost."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "properties": {},
-            "required": []
         }
     },
     {
@@ -293,24 +292,28 @@ def handle_get_system_info() -> dict:
 
 
 def handle_list_ollama_models() -> dict:
+    """
+    Queries Ollama's REST API (GET /api/tags) rather than shelling out to a
+    local `ollama` CLI — this server no longer assumes it's co-located with
+    Ollama; OLLAMA_URL points at wherever Ollama actually lives.
+    """
     try:
-        result = subprocess.check_output(
-            ["ollama", "list"], stderr=subprocess.DEVNULL
-        ).decode().strip()
-        lines = result.splitlines()
-        models = [line.split()[0] for line in lines[1:] if line.strip()]
-        return {"models": models, "raw": result}
-    except FileNotFoundError:
-        return {"error": "ollama command not found"}
-    except Exception as e:
-        return {"error": str(e)}
+        resp = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m.get("name", "") for m in data.get("models", [])]
+        return {"models": models, "raw": data}
+    except requests.RequestException as e:
+        return {"error": f"Could not reach Ollama at {OLLAMA_URL}: {e}"}
+    except (ValueError, KeyError) as e:
+        return {"error": f"Unexpected response from Ollama: {e}"}
 
 
 def handle_run_ping(host: str) -> dict:
     # Restrict to lab subnets only
     allowed_prefixes = (
         "192.168.", "10.", "172.16.",
-        "localhost", "mcphost", "chatbot", "fortiaigate"
+        "localhost", "mcphost", "agent", "fortiaigate"
     )
     if not any(host.startswith(p) for p in allowed_prefixes):
         return {"error": f"Host '{host}' is outside the allowed lab range"}
@@ -341,31 +344,6 @@ def handle_check_service_health(service: str) -> dict:
             "round-trip result in your summary."
         )
     }
-
-def handle_get_gpu_status() -> dict:
-    if not shutil.which("nvidia-smi"):
-        return {"error": "nvidia-smi not found — no NVIDIA GPU or driver not installed"}
-    try:
-        output = subprocess.check_output(
-            [
-                "nvidia-smi",
-                "--query-gpu=name,memory.total,memory.used,memory.free,"
-                           "temperature.gpu,utilization.gpu",
-                "--format=csv,noheader,nounits"
-            ],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        p = [x.strip() for x in output.split(",")]
-        return {
-            "gpu_name":        p[0],
-            "memory_total_mb": p[1],
-            "memory_used_mb":  p[2],
-            "memory_free_mb":  p[3],
-            "temperature_c":   p[4],
-            "utilization_pct": p[5]
-        }
-    except Exception as e:
-        return {"error": str(e)}
 
 def handle_get_field_injection_record(record_id: str) -> dict:
     """
@@ -529,7 +507,6 @@ def dispatch(name: str, arguments: dict) -> dict:
         "get_system_info":    lambda: handle_get_system_info(),
         "list_ollama_models": lambda: handle_list_ollama_models(),
         "run_ping":           lambda: handle_run_ping(arguments.get("host", "")),
-        "get_gpu_status":     lambda: handle_get_gpu_status(),
         "check_lab_license":  lambda: handle_check_lab_license(),
         "get_field_injection_record": lambda: handle_get_field_injection_record(arguments.get("record_id", "ACME-99999")),
         "check_service_health": lambda: handle_check_service_health(arguments.get("service", "")),
@@ -544,9 +521,18 @@ def dispatch(name: str, arguments: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Ollama integration config — read here (module load) so it's available to
+# handle_list_ollama_models() regardless of call order; see that function
+# and the module docstring for details.
+# ---------------------------------------------------------------------------
+
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.37.6:11434").rstrip("/")
+
+
+# ---------------------------------------------------------------------------
 # JSON-RPC 2.0 over HTTP transport (Streamable HTTP, stateless — one POST
-# endpoint). Mirrors the wire format chatbot/mcp_http_client.py already
-# speaks to the dlptest backend, so the chatbot uses the SAME client class
+# endpoint). Mirrors the wire format agent/mcp_http_client.py already
+# speaks to the dlptest backend, so the agent uses the SAME client class
 # (HTTPMCPClient) for both MCP backends — only the URL and bearer token
 # differ. See module docstring above for env vars.
 # ---------------------------------------------------------------------------

@@ -1,24 +1,28 @@
 # mcp-lab
 
 A learning project demonstrating the Model Context Protocol (MCP) with a
-Flask chatbot, a Python-native MCP client, and an MCP server exposing lab tools.
+Flask agent, a Python-native MCP client, and an MCP server exposing lab tools.
 
-**Phase 1** — chatbot talks directly to Ollama (qwen2.5:14b) on mcphost  
+**Phase 1** — agent talks directly to Ollama (qwen2.5:14b) on mcphost  
 **Phase 2** — swap one environment variable to route through FortiAIGate
 
 ## Lab Inventory
 
 | Role | Host | IP |
 |------|------|----|
-| Chatbot + MCP client | chatbot | 192.168.2.132 |
+| Agent + MCP client | agent | 192.168.2.132 |
 | MCP server + Ollama | mcphost | 192.168.37.6 |
 | AI proxy (Phase 2) | fortiaigate | 192.168.2.131:30443 |
+
+This table reflects this lab's current physical layout. The agent and
+mcp-server (and Ollama) don't have to live on separate hosts, or on these
+specific IPs — see **Topology** below.
 
 ## Architecture
 
 ```
 +---------------------------+        +----------------------------+
-|  chatbot (192.168.2.132)  |        |  mcphost (192.168.37.6)   |
+|  agent (192.168.2.132)    |        |  mcphost (192.168.37.6)   |
 |                            |  JSON- |                            |
 |  Flask app (app.py)       |  RPC/  |  mcp_server.py (Flask)     |
 |  MCP client                | HTTP  |  POST /mcp                 |
@@ -26,44 +30,70 @@ Flask chatbot, a Python-native MCP client, and an MCP server exposing lab tools.
 |                            |<-------|  get_system_info           |
 |                            |        |  list_ollama_models        |
 |                            |  HTTP  |  run_ping                  |
-|                            |------->|  get_gpu_status            |
+|                            |------->|                            |
 |                            |<-------|                            |
 |                            |        |  Ollama / qwen2.5:14b      |
 +---------------------------+        +----------------------------+
 ```
 
-The MCP server is LLM-agnostic — tools work identically whether the chatbot
+The MCP server is LLM-agnostic — tools work identically whether the agent
 is talking to Ollama, Anthropic, or any OpenAI-compatible endpoint. Only the
-`LLM_URL` and `API_KEY` in `chatbot/chatbot.env` change between backends.
+`OLLAMA_URL` and `API_KEY` in `agent/agent.env` change between backends.
 
-Chatbot <-> mcphost speaks real JSON-RPC 2.0 MCP over HTTP — the same wire
+Agent <-> mcp-server speaks real JSON-RPC 2.0 MCP over HTTP — the same wire
 format and the same `HTTPMCPClient` class used for the public dlptest
-backend, just a different URL and token. Every request to mcphost must carry
-`Authorization: Bearer <MCP_AUTH_TOKEN>`, checked in `mcp_server.py` before
-anything else runs. `setup-mcphost.sh` generates that token; copy it into
-`MCP_AUTH_TOKEN` in `chatbot.env` on the chatbot VM (`setup-chatbot-vm.sh`
+backend, just a different URL and token. Every request to mcp-server must
+carry `Authorization: Bearer <MCP_AUTH_TOKEN>`, checked in `mcp_server.py`
+before anything else runs. `setup-mcphost.sh` generates that token; copy it
+into `MCP_AUTH_TOKEN` in `agent.env` on the agent VM (`setup-agent-vm.sh`
 prompts for it).
+
+### Topology
+
+Both `.env.example` files declare the same three variables — `AGENT_IP`,
+`MCPSERVER_IP`, `OLLAMA_URL` — describing where each of the three
+components lives. Defaults are all `127.0.0.1`: clone the repo onto one box,
+start both services, and they find each other over loopback with zero
+editing. Each app only *uses* the vars relevant to its own outbound
+connections (e.g. mcp-server doesn't call the agent back, so `AGENT_IP` in
+`mcp-server.env` is informational only) — every var is still declared in
+both files so either one shows the full topology at a glance.
+
+To split across separate hosts — including this lab's actual layout in the
+table above — replace `127.0.0.1` with the real IP for whichever component
+moved, **in both `.env` files**:
+
+```bash
+# agent/agent.env
+MCPSERVER_IP=192.168.37.6
+OLLAMA_URL=http://192.168.37.6:11434
+
+# mcp-server/mcp-server.env
+OLLAMA_URL=http://192.168.37.6:11434
+```
+
+No code changes either way.
 
 ## Repository Structure
 
 ```
 mcp-lab/
-├── chatbot/
-│   ├── app.py                  Flask chatbot with MCP client wired in
-│   ├── mcp_http_client.py      JSON-RPC/HTTP MCP client (mcphost + dlptest)
+├── agent/
+│   ├── app.py                  Flask agent with MCP client wired in
+│   ├── mcp_http_client.py      JSON-RPC/HTTP MCP client (mcp-server + dlptest)
 │   ├── mcp_registry.py         Multi-backend tool router
 │   ├── requirements.txt        flask, requests
 │   ├── run.sh                  Manual start script
-│   ├── chatbot.env             Environment variables (gitignored)
-│   ├── chatbot.env.example     Safe template to commit
-│   └── mcp-chatbot.service     Systemd unit
+│   ├── agent.env               Environment variables (gitignored)
+│   ├── agent.env.example       Safe template to commit
+│   └── mcp-agent.service       Systemd unit
 ├── mcp-server/
 │   ├── mcp_server.py           MCP server (runs on mcphost, JSON-RPC/HTTP)
 │   ├── mcp-server.env          Bearer token (gitignored)
 │   ├── mcp-server.env.example  Safe template to commit
 │   └── mcp-server.service      Systemd unit
 ├── scripts/
-│   ├── setup-chatbot-vm.sh     One-time setup for chatbot VM
+│   ├── setup-agent-vm.sh      One-time setup for agent VM
 │   └── setup-mcphost.sh      One-time setup for mcphost
 └── README.md
 ```
@@ -77,17 +107,17 @@ need to exist yet.
 ### 1 — mcphost (do this first)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jswineinger/mcp-lab/main/scripts/setup-mcphost.sh \
+curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-chatbot-and-mcp-server/main/scripts/setup-mcphost.sh \
   -o setup-mcphost.sh && bash setup-mcphost.sh
 ```
 
 The script will:
 - Generate a GitHub deploy key and pause for you to add it at
-  `github.com/jswineinger/mcp-lab/settings/keys`
+  `github.com/jswineinger/simple-chatbot-and-mcp-server/settings/keys`
 - Clone the repo to `~/mcp-lab`
 - Create the Python venv
 - Generate `mcp-server.env` with a random bearer token and pause so you can
-  copy it — you'll paste this into `chatbot.env` in step 2
+  copy it — you'll paste this into `agent.env` in step 2
 - Install and start the `mcp-server` systemd service
 
 Self-test after setup (replace `TOKEN` with the value from `mcp-server.env`):
@@ -97,23 +127,23 @@ curl -s http://localhost:8765/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-### 2 — chatbot VM (192.168.2.132)
+### 2 — agent VM (192.168.2.132)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jswineinger/mcp-lab/main/scripts/setup-chatbot-vm.sh \
-  -o setup-chatbot-vm.sh && bash setup-chatbot-vm.sh
+curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-chatbot-and-mcp-server/main/scripts/setup-agent-vm.sh \
+  -o setup-agent-vm.sh && bash setup-agent-vm.sh
 ```
 
 The script will:
 - Generate a GitHub deploy key (add it to GitHub when prompted)
 - Clone the repo to `~/mcp-lab`
 - Create the Python venv
-- Set up `chatbot.env` and prompt you to paste in the `MCP_AUTH_TOKEN`
+- Set up `agent.env` and prompt you to paste in the `MCP_AUTH_TOKEN`
   generated by `setup-mcphost.sh`
-- Install and enable the `mcp-chatbot` systemd service
+- Install and enable the `mcp-agent` systemd service
 
 ```bash
-sudo systemctl start mcp-chatbot
+sudo systemctl start mcp-agent
 ```
 
 Browse to **http://192.168.2.132:8000**
@@ -125,28 +155,18 @@ Browse to **http://192.168.2.132:8000**
 | "What's the system status on mcphost?" | `get_system_info` |
 | "What models are available in Ollama?" | `list_ollama_models` |
 | "Ping the FortiAIGate at 192.168.2.131" | `run_ping` |
-| "What's the GPU memory usage?" | `get_gpu_status` |
 
 ## Phase 2 — Route Through FortiAIGate
 
-Edit `chatbot/chatbot.env`:
-
-```bash
-LLM_URL=https://192.168.2.131:30443/v1
-VERIFY_TLS=false
-```
-
-```bash
-sudo systemctl restart mcp-chatbot
-```
-
-No code changes. Tools, MCP server, and tool-call loop are unchanged.
+In the running UI, switch the **Mode** toggle from Direct to FAIG — no
+`.env` edit or restart needed. (`FAIG_URL` in `agent/agent.env` configures
+*where* FortiAIGate is; it doesn't need to change to flip modes.)
 
 ## Logs
 
 ```bash
-# Chatbot VM
-sudo journalctl -u mcp-chatbot -f
+# Agent VM
+sudo journalctl -u mcp-agent -f
 
 # mcphost
 sudo journalctl -u mcp-server -f

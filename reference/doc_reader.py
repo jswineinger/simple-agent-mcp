@@ -1,5 +1,5 @@
 """
-doc_reader.py  --  chatbot-side plain-text extraction for the FAIG RAG/file-reader surface.
+doc_reader.py  --  agent-side plain-text extraction for the FAIG RAG/file-reader surface.
 
 Purpose: ingest an uploaded document, extract to PLAIN TEXT only, so the extracted
 content can be spliced into the user turn and ride the existing FAIG-inspected path.

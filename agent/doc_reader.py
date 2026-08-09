@@ -1,5 +1,5 @@
 """
-doc_reader.py — chatbot-side plain-text extraction for the FAIG RAG/file-reader surface.
+doc_reader.py — agent-side plain-text extraction for the FAIG RAG/file-reader surface.
 
 Ingests an uploaded document straight from its in-memory bytes (no temp files —
 app.py hands this the raw upload stream) and extracts to PLAIN TEXT so it can be

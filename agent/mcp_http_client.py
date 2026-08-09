@@ -150,7 +150,7 @@ class HTTPMCPClient:
         result = self._rpc("initialize", {
             "protocolVersion": "2025-06-18",
             "capabilities": {},
-            "clientInfo": {"name": "mcp-lab-chatbot", "version": "1.0"},
+            "clientInfo": {"name": "mcp-lab-agent", "version": "1.0"},
         })
         server_version = result.get("protocolVersion", "unknown")
         logger.info(f"{self.name} MCP handshake ok — protocolVersion={server_version}")
