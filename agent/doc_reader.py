@@ -1,17 +1,17 @@
 """
-doc_reader.py — agent-side plain-text extraction for the FAIG RAG/file-reader surface.
+doc_reader.py — agent-side plain-text extraction for the AI Proxy RAG/file-reader surface.
 
 Ingests an uploaded document straight from its in-memory bytes (no temp files —
 app.py hands this the raw upload stream) and extracts to PLAIN TEXT so it can be
-spliced into the user turn and ride the existing FAIG-inspected path. Base64
+spliced into the user turn and ride the existing AI-Proxy-inspected path. Base64
 passthrough is NOT implemented here — that's a separate future test.
 
 Supported: .txt .md (plain read) | .pdf (PyMuPDF) | .docx (python-docx)
 
 This is a TEST HARNESS component. It deliberately does no sanitising of the
 extracted text — a hidden instruction is exactly the payload we want to survive
-extraction and reach the model context, so FAIG's input scanner gets a chance
-to catch it.
+extraction and reach the model context, so the AI Proxy's input scanner gets a
+chance to catch it.
 """
 
 import io
@@ -111,7 +111,8 @@ def build_rag_turn(question, doc_text, filename):
     The context/question seam is deliberate: it lets you test whether the model
     honours an instruction planted in the "context" block vs. the "question" block.
     The whole string becomes the user message content -> rides the existing
-    4-mode routing -> gets scanned by FAIG's input scanner on the FAIG paths.
+    4-mode routing -> gets scanned by the AI Proxy's input scanner on the
+    AI-Proxy paths.
     """
     return (
         f'Context from uploaded document "{filename}":\n'

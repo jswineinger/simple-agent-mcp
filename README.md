@@ -4,7 +4,7 @@ A learning project demonstrating the Model Context Protocol (MCP) with a
 Flask agent, a Python-native MCP client, and an MCP server exposing lab tools.
 
 **Phase 1** — agent talks directly to Ollama (qwen2.5:14b) on mcphost  
-**Phase 2** — swap one environment variable to route through FortiAIGate
+**Phase 2** — switch the UI's Mode toggle to route through the AI Proxy
 
 ## Lab Inventory
 
@@ -154,13 +154,13 @@ Browse to **http://192.168.2.132:8000**
 |--------|-----------|
 | "What's the system status on mcphost?" | `get_system_info` |
 | "What models are available in Ollama?" | `list_ollama_models` |
-| "Ping the FortiAIGate at 192.168.2.131" | `run_ping` |
+| "Ping the AI Proxy at 192.168.2.131" | `run_ping` |
 
-## Phase 2 — Route Through FortiAIGate
+## Phase 2 — Route Through the AI Proxy
 
-In the running UI, switch the **Mode** toggle from Direct to FAIG — no
-`.env` edit or restart needed. (`FAIG_URL` in `agent/agent.env` configures
-*where* FortiAIGate is; it doesn't need to change to flip modes.)
+In the running UI, switch the **Mode** toggle from Direct to AI Proxy — no
+`.env` edit or restart needed. (`AI_PROXY_URL` in `agent/agent.env`
+configures *where* the AI Proxy is; it doesn't need to change to flip modes.)
 
 ## Logs
 

@@ -24,9 +24,9 @@ GITHUB_REPO="simple-agent-mcp"                # actual GitHub repo slug
 LOCAL_DIR_NAME="mcp-lab"                      # local clone dir name — kept
                                                # short; must match the paths
                                                # baked into *.service files
-REPO_DIR="/home/mcpsvc/${LOCAL_DIR_NAME}"
+REPO_DIR="/home/labadmin/${LOCAL_DIR_NAME}"
 AGENT_DIR="${REPO_DIR}/agent"
-GITHUB_KEY="/home/mcpsvc/.ssh/id_ed25519_github"
+GITHUB_KEY="/home/labadmin/.ssh/id_ed25519_github"
 MCPHOST="192.168.37.6"
 
 echo "=== MCP Lab — Agent VM Setup ==="
@@ -44,8 +44,8 @@ echo "  Done."
 # 2. GitHub SSH deploy key
 # ---------------------------------------------------------------------------
 echo "[2/6] GitHub SSH key setup..."
-mkdir -p /home/mcpsvc/.ssh
-chmod 700 /home/mcpsvc/.ssh
+mkdir -p /home/labadmin/.ssh
+chmod 700 /home/labadmin/.ssh
 
 if [ ! -f "${GITHUB_KEY}" ]; then
     echo "  Generating GitHub deploy key..."
@@ -71,7 +71,7 @@ else
 fi
 
 # Configure SSH to use this key for github.com
-SSH_CONFIG="/home/mcpsvc/.ssh/config"
+SSH_CONFIG="/home/labadmin/.ssh/config"
 if ! grep -q "Host github.com" "${SSH_CONFIG}" 2>/dev/null; then
     cat >> "${SSH_CONFIG}" <<EOF
 

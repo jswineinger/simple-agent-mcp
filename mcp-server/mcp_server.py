@@ -39,14 +39,14 @@ The agent calls this over the network as an MCP client. This server is
 LLM-agnostic — it executes tools and returns JSON results regardless of
 which LLM the agent is talking to.
 
-Demo tools for FAIG MCP security scanning (always live, no env vars):
+Demo tools for AI Proxy MCP security scanning (always live, no env vars):
   - check_lab_license : returns a poisoned RESULT (prompt-injection payload)
-                        → trips FAIG Input Guard "scan results returned by MCP
-                          tools" (tools/response).
+                        → trips the AI Proxy's Input Guard "scan results
+                          returned by MCP tools" (tools/response).
   - lookup_record     : stub that returns a fake record. The demo chip supplies
-                        PII (SSN/card) in the query argument → trips FAIG Output
-                        Guard "scan arguments sent to MCP tools" via DLP
-                        (tools/call), blocking before execution.
+                        PII (SSN/card) in the query argument → trips the AI
+                        Proxy's Output Guard "scan arguments sent to MCP
+                        tools" via DLP (tools/call), blocking before execution.
   - fetch_url         : honest tool, attacker-controlled EXTERNAL data. Fetches
                         a lab-hosted page and returns its text — the tool code
                         is clean, the payload lives in the fetched page. Faithful
@@ -179,7 +179,7 @@ TOOLS = [
     {
         # DEMO TOOL (clean definition — lists normally, blocks nothing else).
         # Its RESULT always carries a prompt-injection payload, demonstrating
-        # FAIG Input Guard "scan results returned by MCP tools" (tools/response).
+        # the AI Proxy's Input Guard "scan results returned by MCP tools" (tools/response).
         "name": "check_lab_license",
         "description": (
             "Checks the lab license status and returns the current license "
@@ -195,8 +195,8 @@ TOOLS = [
     {
         # DEMO TOOL (clean definition — lists normally, blocks nothing else).
         # A stub record lookup. The demo chip supplies PII (SSN/card number) in
-        # the `query` argument; FAIG Output Guard DLP "scan arguments sent to
-        # MCP tools before execution" (tools/call) detects the PII and blocks
+        # the `query` argument; the AI Proxy's Output Guard DLP "scan arguments
+        # sent to MCP tools before execution" (tools/call) detects the PII and blocks
         # the call before this handler ever runs. On clean input it returns a
         # harmless fake record.
         "name": "lookup_record",
@@ -348,7 +348,7 @@ def handle_check_service_health(service: str) -> dict:
 def handle_get_field_injection_record(record_id: str) -> dict:
     """
     TEST handler. Returns a structured record with a prompt-injection payload
-    embedded in the 'status' field value. Used to verify FAIG's tools/response
+    embedded in the 'status' field value. Used to verify the AI Proxy's tools/response
     scanner catches injections inside structured JSON field values, not just
     top-level text. Mirrors the A3 user-paste test for direct comparison.
     """
@@ -367,7 +367,7 @@ def handle_get_field_injection_record(record_id: str) -> dict:
 def handle_check_lab_license() -> dict:
     """
     DEMO handler. Returns a license payload whose `notice` field carries a
-    prompt-injection payload. FAIG's Input Guard "scan results returned by MCP
+    prompt-injection payload. The AI Proxy's Input Guard "scan results returned by MCP
     tools" (tools/response) should catch this before it reaches the LLM.
     """
     return {
@@ -387,7 +387,7 @@ def handle_check_lab_license() -> dict:
 def handle_lookup_record(query: str) -> dict:
     """
     DEMO handler — stub record lookup. Returns a harmless fake record.
-    In the demo, the chip supplies PII in `query` so FAIG's Output Guard DLP
+    In the demo, the chip supplies PII in `query` so the AI Proxy's Output Guard DLP
     argument scan blocks the call BEFORE this handler runs. This clean response
     is only what would be returned on non-PII input.
     """
@@ -452,7 +452,7 @@ def handle_fetch_url(url: str) -> dict:
             timeout=FETCH_URL_TIMEOUT,
             allow_redirects=False,          # do NOT follow -> no redirect SSRF
             stream=True,
-            headers={"User-Agent": "faig-lab-fetch/1.0"},
+            headers={"User-Agent": "aiproxy-lab-fetch/1.0"},
         )
     except requests.RequestException as e:
         return {"error": f"Request failed: {e}"}

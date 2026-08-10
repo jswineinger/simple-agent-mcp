@@ -91,7 +91,7 @@ def fetch_url(url):
             timeout=FETCH_TIMEOUT,
             allow_redirects=False,          # do NOT follow -> no redirect SSRF
             stream=True,
-            headers={"User-Agent": "faig-lab-fetch/1.0"},
+            headers={"User-Agent": "aiproxy-lab-fetch/1.0"},
         )
     except requests.RequestException as e:
         raise FetchError(f"Request failed: {e}")

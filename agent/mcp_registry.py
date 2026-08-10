@@ -17,14 +17,15 @@ handed to it is already connected.
 
 --- Threat-model note (why this matters for reading lab results) ---
 The agent invokes MCP tools DIRECTLY — HTTP(S) to mcphost, HTTPS to
-dlptest. These tool calls do not traverse FortiAIGate; FAIG only sits in
-the LLM request path. So FAIG only ever sees a tool's *result*, and only
-because it re-enters messages[] on the NEXT LLM call in the FAIG modes —
-in Direct modes the result reaches the model completely unscanned (the
-control arm). Concretely: dlptest__echo_sensitive_data's payload rides
-the outbound tools/call *arguments* on the agent→dlptest leg, which FAIG
-never sees in this architecture; only the echoed *result*, re-injected
-into the next prompt, is subject to FAIG scanning, and only in FAIG modes.
+dlptest. These tool calls do not traverse the AI Proxy; the AI Proxy only
+sits in the LLM request path. So the AI Proxy only ever sees a tool's
+*result*, and only because it re-enters messages[] on the NEXT LLM call in
+AI-Proxy modes — in Direct modes the result reaches the model completely
+unscanned (the control arm). Concretely: dlptest__echo_sensitive_data's
+payload rides the outbound tools/call *arguments* on the agent→dlptest leg,
+which the AI Proxy never sees in this architecture; only the echoed
+*result*, re-injected into the next prompt, is subject to AI Proxy
+scanning, and only in AI-Proxy modes.
 Don't misread that tool as testing outbound tool-call inspection — it
 isn't, in this architecture. dlptest__generate_prompt_context returns PII
 embedded in prose (RAG/context-style), pairing with doc_reader.py and any

@@ -3,20 +3,20 @@
 MCP Lab — Secure Chat client
 =============================
 
-Extends the FortiAIGate Lab agent with MCP (Model Context Protocol) support.
+Extends the AI Proxy Lab agent with MCP (Model Context Protocol) support.
 The browser talks to THIS app; this app relays each turn to the model through
-FortiAIGate (or directly to Ollama/Anthropic in Direct mode).
+the AI Proxy (or directly to Ollama/Anthropic in Direct mode).
 
-    [ browser UI ] --local--> [ this Flask app ] --> [ FortiAIGate ] --> [ Ollama ]
+    [ browser UI ] --local--> [ this Flask app ] --> [ AI Proxy ] --> [ Ollama ]
                                       |          \--> [ Ollama direct  ]
                                       |          \--> [ Anthropic direct ]
                                  [ MCP client ] --> [ mcp-server ]
 
 Mode + Flow combinations:
-    Direct  + Private  →  Ollama (no proxy)
-    Direct  + Public   →  Anthropic API (no proxy)
-    FAIG    + Private  →  FortiAIGate /private/chat/completions → Ollama
-    FAIG    + Public   →  FortiAIGate /public/chat/completions  → Ollama
+    Direct   + Private  →  Ollama (no proxy)
+    Direct   + Public   →  Anthropic API (no proxy)
+    AI Proxy + Private  →  AI Proxy /private/chat/completions → Ollama
+    AI Proxy + Public   →  AI Proxy /public/chat/completions  → Ollama
 
 Config via environment variables:
     AGENT_IP           this box's own address    default: 127.0.0.1 (informational only)
@@ -28,10 +28,10 @@ Config via environment variables:
                        comment in agent.env.example.
 
     PUBLIC_LLM_URL     Anthropic base URL        default: https://api.anthropic.com/v1
-    FAIG_URL           FortiAIGate base URL      default: https://192.168.2.131:30443/v1
+    AI_PROXY_URL       AI Proxy base URL         default: https://192.168.2.131:30443/v1
     PRIVATE_MODEL      Ollama model name         default: qwen2.5:14b
     PUBLIC_MODEL       Anthropic model name      default: claude-sonnet-4-6
-    API_KEY            bearer token for Ollama/FAIG  default: ollama
+    API_KEY            bearer token for Ollama/AI Proxy  default: ollama
     ANTHROPIC_API_KEY  Anthropic API key         default: (none)
     HOST / PORT        bind address              default: 0.0.0.0 / 8000
     VERIFY_TLS         verify TLS certs          default: false
@@ -167,23 +167,24 @@ PRIVATE_LLM_URL   = f"{OLLAMA_URL}/v1"
 MCP_SERVER_URL    = f"http://{MCPSERVER_IP}:{MCP_SERVER_PORT}/mcp"
 
 PUBLIC_LLM_URL    = os.getenv("PUBLIC_LLM_URL",     "https://api.anthropic.com/v1").rstrip("/")
-FAIG_URL          = os.getenv("FAIG_URL",            "https://192.168.2.131:30443/v1").rstrip("/")
+AI_PROXY_URL      = os.getenv("AI_PROXY_URL",        "https://192.168.2.131:30443/v1").rstrip("/")
 PRIVATE_MODEL     = os.getenv("PRIVATE_MODEL",       "qwen2.5:14b")
 PUBLIC_MODEL      = os.getenv("PUBLIC_MODEL",        "claude-sonnet-4-6")
 API_KEY           = os.getenv("API_KEY",             "ollama")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY",  "")
 
-# FortiAIGate "API Key Validation" (per-AI-Flow setting) — separate from the
-# upstream LLM key above. When enabled on a flow, FAIG validates this header
-# against its Settings > API Keys list; the upstream provider key is
-# configured server-side in FAIG and is unrelated. Enabling this changes the
-# FAIG-mode Authorization value from "Bearer ollama" to "Bearer 123456",
-# which is harmless while FAIG validation is off and correct once it's on.
-FAIG_VALIDATION_ENABLED = os.getenv("FAIG_VALIDATION_ENABLED", "true").lower() in ("1", "true", "yes", "on")
-FAIG_VALIDATION_KEY     = os.getenv("FAIG_VALIDATION_KEY", "123456")
-# Header FAIG validates. Must match the AI Flow's "Custom Authentication Header"
-# field (FAIG default is Authorization).
-FAIG_VALIDATION_HEADER  = os.getenv("FAIG_VALIDATION_HEADER", "Authorization")
+# AI Proxy "API Key Validation" (per-AI-Flow setting) — separate from the
+# upstream LLM key above. When enabled on a flow, the AI Proxy validates this
+# header against its own Settings > API Keys list; the upstream provider key
+# is configured server-side on the proxy and is unrelated. Enabling this
+# changes the AI-Proxy-mode Authorization value from "Bearer ollama" to
+# "Bearer 123456", which is harmless while validation is off and correct
+# once it's on.
+AI_PROXY_VALIDATION_ENABLED = os.getenv("AI_PROXY_VALIDATION_ENABLED", "true").lower() in ("1", "true", "yes", "on")
+AI_PROXY_VALIDATION_KEY     = os.getenv("AI_PROXY_VALIDATION_KEY", "123456")
+# Header the AI Proxy validates. Must match the AI Flow's "Custom
+# Authentication Header" field (default is Authorization).
+AI_PROXY_VALIDATION_HEADER  = os.getenv("AI_PROXY_VALIDATION_HEADER", "Authorization")
 
 HOST              = os.getenv("HOST",                "0.0.0.0")
 PORT              = int(os.getenv("PORT",            "8000"))
@@ -204,24 +205,24 @@ if not VERIFY_TLS:
         requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 # ---------------------------------------------------------------------------
-# FortiAIGate block detection
+# AI Proxy block detection
 # ---------------------------------------------------------------------------
 BLOCK_STATUSES = {400, 403, 406, 409, 413, 422, 429, 451}
 
 def looks_blocked(mode, status, text):
     """
-    True only for a FAIG-mode response that FAIG itself blocked. Direct mode
-    never touches FAIG, so it can never legitimately trip this.
+    True only for an AI-Proxy-mode response that the proxy itself blocked.
+    Direct mode never touches the AI Proxy, so it can never legitimately
+    trip this.
 
-    Primary signal is structured, not a body-text keyword scan: FAIG returns
-    HTTP 200 with finish_reason == "content_filter" on the blocked choice
-    (verified against a live FAIG 8.0.1 instance — see
-    faig-scanner-findings.md's "Block signal" note). An earlier version of
-    this function scanned message content for words like "policy"/"denied"
-    and false-positived on any ordinary response that happened to use them
-    (e.g. a summary of security-product features).
+    Primary signal is structured, not a body-text keyword scan: the AI Proxy
+    returns HTTP 200 with finish_reason == "content_filter" on the blocked
+    choice (verified against a live instance). An earlier version of this
+    function scanned message content for words like "policy"/"denied" and
+    false-positived on any ordinary response that happened to use them (e.g.
+    a summary of security-product features).
     """
-    if mode != "faig":
+    if mode != "aiproxy":
         return False
     if status in BLOCK_STATUSES:
         return True
@@ -240,8 +241,8 @@ def looks_blocked(mode, status, text):
 # Each backend is constructed under its own try/except so one being down
 # never takes the other with it. Tool names the model sees are namespaced
 # "<server>__<tool>" by the registry (see mcp_registry.py's docstring for
-# why FAIG only ever sees a tool's *result*, never the agent→MCP call
-# itself, and only in FAIG modes).
+# why the AI Proxy only ever sees a tool's *result*, never the agent→MCP
+# call itself, and only in AI-Proxy modes).
 # ---------------------------------------------------------------------------
 backends = {}
 
@@ -295,16 +296,16 @@ class BlockedError(Exception):
 
 class ValidationKeyError(Exception):
     """
-    FAIG API Key Validation rejected the request (only raised when the
+    AI Proxy API Key Validation rejected the request (only raised when the
     agent itself attached a validation key — see call_llm). 403 is
-    genuinely ambiguous with FAIG's "Alert & Deny" content-block verdicts;
-    FAIG's Logs > Events/Traffic page is the source of truth for which
-    actually occurred.
+    genuinely ambiguous with the AI Proxy's "Alert & Deny" content-block
+    verdicts; the AI Proxy's Logs > Events/Traffic page is the source of
+    truth for which actually occurred.
     """
     def __init__(self, status, detail):
         self.status = status
         self.detail = detail
-        super().__init__(f"FAIG API key validation failed ({status})")
+        super().__init__(f"AI Proxy API key validation failed ({status})")
 
 
 # ---------------------------------------------------------------------------
@@ -313,8 +314,8 @@ class ValidationKeyError(Exception):
 # The browser's resent-history array carries an opaque [[doc-upload:<id>]]
 # placeholder in place of the real extracted text. Each /api/chat call resolves
 # any placeholders back to real text from this dict before the mode/flow fork,
-# so FAIG still sees (and re-scans, every turn) the full accumulated payload —
-# it just never crosses back over the wire to the client. Clear needs no
+# so the AI Proxy still sees (and re-scans, every turn) the full accumulated
+# payload — it just never crosses back over the wire to the client. Clear needs no
 # server-side counterpart: once the browser stops resending a placeholder, the
 # matching entry here is simply never referenced again.
 # ---------------------------------------------------------------------------
@@ -343,8 +344,8 @@ def _resolve_doc_placeholders(history):
 # sends only the key; prompt text is resolved here and never round-trips
 # through the browser.
 #
-# NOTE: "off" USED TO mean no system message at all (the "unrealistic no-
-# system-prompt baseline" described in faig-scanner-findings.md). It now
+# NOTE: "off" USED TO mean no system message at all — an unrealistic no-
+# system-prompt baseline that inflates injection success rates. It now
 # carries a single line ("Always reply in English.") so all three replies
 # stay comparable in language — deliberately requested, but it means "off" is
 # no longer a true no-system-prompt condition. Findings recorded before this
@@ -407,15 +408,15 @@ def config():
         },
         "mcp_available": MCP_AVAILABLE,
         "mcp_tools":     tools,
-        "faig_validation": {
-            "enabled": FAIG_VALIDATION_ENABLED,
-            "header":  FAIG_VALIDATION_HEADER,
+        "aiproxy_validation": {
+            "enabled": AI_PROXY_VALIDATION_ENABLED,
+            "header":  AI_PROXY_VALIDATION_HEADER,
         },
         "urls": {
             "direct_private": f"{PRIVATE_LLM_URL}/chat/completions",
             "direct_public":  f"{PUBLIC_LLM_URL}/chat/completions",
-            "faig_private":   f"{FAIG_URL}/private/chat/completions",
-            "faig_public":    f"{FAIG_URL}/public/chat/completions",
+            "aiproxy_private": f"{AI_PROXY_URL}/private/chat/completions",
+            "aiproxy_public":  f"{AI_PROXY_URL}/public/chat/completions",
         }
     })
 
@@ -446,7 +447,7 @@ def chat():
         question = None
         upload   = None
 
-    if mode not in ("direct", "faig"):
+    if mode not in ("direct", "aiproxy"):
         mode = "direct"
     if flow not in ("public", "private"):
         flow = "private"
@@ -493,24 +494,24 @@ def chat():
         base_url = PRIVATE_LLM_URL if flow == "private" else PUBLIC_LLM_URL
         chat_url = f"{base_url}/chat/completions"
     else:
-        chat_url = f"{FAIG_URL}/{flow}/chat/completions"
+        chat_url = f"{AI_PROXY_URL}/{flow}/chat/completions"
 
     # Build headers
     headers = {"Content-Type": "application/json"}
     if auth_key:
         headers["Authorization"] = f"Bearer {auth_key}"
 
-    # FortiAIGate API Key Validation — only on requests bound for FAIG.
-    # FAIG validates this header (default: Authorization) against its
+    # AI Proxy API Key Validation — only on requests bound for the AI Proxy.
+    # The proxy validates this header (default: Authorization) against its
     # Settings > API Keys list when API Key Validation is enabled on the flow.
-    if mode == "faig" and FAIG_VALIDATION_ENABLED and FAIG_VALIDATION_KEY:
-        if FAIG_VALIDATION_HEADER.lower() == "authorization":
+    if mode == "aiproxy" and AI_PROXY_VALIDATION_ENABLED and AI_PROXY_VALIDATION_KEY:
+        if AI_PROXY_VALIDATION_HEADER.lower() == "authorization":
             # Standard bearer token — overrides the upstream-placeholder value above.
-            headers["Authorization"] = f"Bearer {FAIG_VALIDATION_KEY}"
+            headers["Authorization"] = f"Bearer {AI_PROXY_VALIDATION_KEY}"
         else:
-            # Custom header — FAIG checks only this header and ignores Authorization.
+            # Custom header — the AI Proxy checks only this header and ignores Authorization.
             # Custom headers carry the raw key (no "Bearer " prefix).
-            headers[FAIG_VALIDATION_HEADER] = FAIG_VALIDATION_KEY
+            headers[AI_PROXY_VALIDATION_HEADER] = AI_PROXY_VALIDATION_KEY
 
     # Base payload
     payload = {"model": model, "messages": messages, "temperature": 0}
@@ -547,7 +548,7 @@ def chat():
 
         _log_inbound_raw(request_id, mode, flow, chat_url, r)
 
-        if mode == "faig" and FAIG_VALIDATION_ENABLED and r.status_code in (401, 403):
+        if mode == "aiproxy" and AI_PROXY_VALIDATION_ENABLED and r.status_code in (401, 403):
             body_low = (r.text or "").lower()
             # Heuristic: an auth/validation rejection, not a content-scanner denial.
             # 401 is unambiguous. For 403, only treat as auth failure when the body
@@ -607,14 +608,14 @@ def chat():
 
     except ValidationKeyError as e:
         # See ValidationKeyError docstring: 403 is ambiguous with a content
-        # block. Check FAIG's Logs > Events/Traffic page to confirm which
-        # this was.
+        # block. Check the AI Proxy's Logs > Events/Traffic page to confirm
+        # which this was.
         latency = (time.perf_counter() - t0) * 1000
         return jsonify({
             "ok":               False,
             "validation_failed": True,
             "status":           e.status,
-            "content":          f"FortiAIGate API key validation failed (HTTP {e.status}). Check the key/header against Settings > API Keys.",
+            "content":          f"AI Proxy API key validation failed (HTTP {e.status}). Check the key/header against Settings > API Keys.",
             "latency_ms":       latency,
             "tools_used":       tools_used,
             "doc_ref":          doc_ref,
@@ -750,15 +751,15 @@ INDEX_HTML = r"""<!doctype html>
     <img src="/logo" alt="WWT" onerror="this.style.display='none'">
     <div>
       <div class="t">MCP Lab — Secure Chat</div>
-      <div class="s">Direct to Ollama/Anthropic or inspected through FortiAIGate</div>
+      <div class="s">Direct to Ollama/Anthropic or inspected through the AI Proxy</div>
     </div>
     <div class="spacer"></div>
     <div class="controls">
       <div class="toggle-group">
         <span class="toggle-label">Mode</span>
         <div class="flow-toggle">
-          <button id="btn-direct" class="active" onclick="setMode('direct')">Direct</button>
-          <button id="btn-faig"   onclick="setMode('faig')">FAIG</button>
+          <button id="btn-direct"  class="active" onclick="setMode('direct')">Direct</button>
+          <button id="btn-aiproxy" onclick="setMode('aiproxy')">AI Proxy</button>
         </div>
       </div>
       <div class="toggle-group">
@@ -843,8 +844,8 @@ function updateBadge(){
 
 function setMode(mode){
   currentMode = mode;
-  document.getElementById('btn-direct').classList.toggle('active', mode === 'direct');
-  document.getElementById('btn-faig').classList.toggle('active',   mode === 'faig');
+  document.getElementById('btn-direct').classList.toggle('active',  mode === 'direct');
+  document.getElementById('btn-aiproxy').classList.toggle('active', mode === 'aiproxy');
   updateBadge();
 }
 
@@ -892,7 +893,7 @@ function addBlock(text, status, ms, tools){
     ? '<div class="tool-row">\u2699 Tools called before block: '+esc(tools.join(', '))+'</div>'
     : '';
   log.appendChild(el('row center block',
-    '<div><div class="bubble"><b>\uD83D\uDEE1 Blocked by FortiAIGate</b>'
+    '<div><div class="bubble"><b>\uD83D\uDEE1 Blocked by AI Proxy</b>'
     +(status?' (HTTP '+status+')':'')+'\n'+esc(text)+'</div>'
     +'<div class="meta">'+Math.round(ms)+' ms</div>'
     +toolHtml+'</div>'));
@@ -1024,8 +1025,8 @@ if __name__ == "__main__":
     logger.info(f"MCP Lab Secure Chat starting on port {PORT}")
     logger.info(f"Direct Private : {PRIVATE_LLM_URL}  model={PRIVATE_MODEL}")
     logger.info(f"Direct Public  : {PUBLIC_LLM_URL}  model={PUBLIC_MODEL}")
-    logger.info(f"FAIG           : {FAIG_URL}")
-    logger.info(f"FAIG validation : enabled={FAIG_VALIDATION_ENABLED} header={FAIG_VALIDATION_HEADER}")
+    logger.info(f"AI Proxy       : {AI_PROXY_URL}")
+    logger.info(f"AI Proxy validation : enabled={AI_PROXY_VALIDATION_ENABLED} header={AI_PROXY_VALIDATION_HEADER}")
     logger.info(f"MCP mcphost  : {MCP_SERVER_URL}  reachable={'mcphost' in backends}")
     logger.info(f"MCP dlptest    : {DLPTEST_MCP_URL}  enabled={DLPTEST_ENABLED}  reachable={'dlptest' in backends}")
     logger.info(f"MCP total      : available={MCP_AVAILABLE}  tools={len(mcp.tool_names()) if mcp else 0}")

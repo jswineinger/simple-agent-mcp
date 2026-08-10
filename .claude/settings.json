@@ -41,12 +41,29 @@
       "Bash(curl -s http://127.0.0.1:8766/mcp -H 'Authorization: Bearer splittest' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"list_ollama_models\",\"arguments\":{}}}')",
       "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcp_server_venv\" \\\\ *)",
       "Bash(git remote *)",
-      "Bash(git ls-remote *)"
+      "Bash(git ls-remote *)",
+      "Bash(git rm *)",
+      "Bash(rm -f faig-scanner-findings.md)",
+      "Bash(git restore *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('agent/mcp_registry.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -m venv /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcpsrv_venv)",
+      "Bash(python -m venv /c/tmp_agent_venv2)",
+      "Bash(/c/tmp_agent_venv2/Scripts/pip install *)",
+      "Bash(MCP_AUTH_TOKEN=faigtest /c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcpsrv_venv/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/mcp-server/mcp_server.py)",
+      "Bash(MCP_AUTH_TOKEN=faigtest PORT=8003 DLPTEST_ENABLED=false /c/tmp_agent_venv2/Scripts/python c:/Users/jim/Documents/Repos/simple-chatbot-and-mcp-server/agent/app.py)",
+      "Bash(curl -s http://127.0.0.1:8003/api/config)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\('aiproxy_validation:', d.get\\('aiproxy_validation'\\)\\); print\\('urls:', d.get\\('urls'\\)\\)\")",
+      "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[],\"mode\":\"aiproxy\",\"flow\":\"private\",\"system_prompt\":\"off\"}' -o /dev/null -w 'HTTP %{http_code}\\\\n')",
+      "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[],\"mode\":\"faig\",\"flow\":\"private\",\"system_prompt\":\"off\"}' -o /dev/null -w 'HTTP %{http_code}\\\\n')",
+      "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"mode\":\"aiproxy\",\"flow\":\"private\",\"system_prompt\":\"off\"}')",
+      "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"mode\":\"faig\",\"flow\":\"private\",\"system_prompt\":\"off\"}')",
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcpsrv_venv\" /c/tmp_agent_venv2 *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv",
       "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv2",
-      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_server_venv"
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_server_venv",
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcpsrv_venv"
     ]
   }
 }
