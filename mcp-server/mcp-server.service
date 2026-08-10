@@ -1,3 +1,6 @@
+# Template — __INSTALL_USER__/__INSTALL_HOME__ are substituted by
+# setup-mcphost.sh at install time (sed, before copying to
+# /etc/systemd/system/). Don't `cp` this file directly; run the script.
 [Unit]
 Description=MCP Server (mcp-lab)
 After=network.target ollama.service
@@ -5,10 +8,10 @@ Wants=ollama.service
 
 [Service]
 Type=simple
-User=labadmin
-WorkingDirectory=/home/labadmin/mcp-lab/mcp-server
-EnvironmentFile=-/home/labadmin/mcp-lab/mcp-server/mcp-server.env
-ExecStart=/home/labadmin/mcp-lab/mcp-server/venv/bin/python3 mcp_server.py
+User=__INSTALL_USER__
+WorkingDirectory=__INSTALL_HOME__/mcp-lab/mcp-server
+EnvironmentFile=-__INSTALL_HOME__/mcp-lab/mcp-server/mcp-server.env
+ExecStart=__INSTALL_HOME__/mcp-lab/mcp-server/venv/bin/python3 mcp_server.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

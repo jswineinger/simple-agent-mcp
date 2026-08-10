@@ -57,13 +57,16 @@
       "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[],\"mode\":\"faig\",\"flow\":\"private\",\"system_prompt\":\"off\"}' -o /dev/null -w 'HTTP %{http_code}\\\\n')",
       "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"mode\":\"aiproxy\",\"flow\":\"private\",\"system_prompt\":\"off\"}')",
       "Bash(curl -s -X POST http://127.0.0.1:8003/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"mode\":\"faig\",\"flow\":\"private\",\"system_prompt\":\"off\"}')",
-      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcpsrv_venv\" /c/tmp_agent_venv2 *)"
+      "Bash(rm -rf \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/mcpsrv_venv\" /c/tmp_agent_venv2 *)",
+      "Bash(gh repo *)",
+      "Bash(rm -f \"/c/Users/jim/AppData/Local/Temp/claude/c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server/843e82d6-5c9e-45a4-85f2-5f96ba81e42c/scratchpad/rendered-default.service\" \\\\ *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv",
       "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_test_venv2",
       "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcp_server_venv",
-      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcpsrv_venv"
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad\\mcpsrv_venv",
+      "C:\\Users\\jim\\AppData\\Local\\Temp\\claude\\c--Users-jim-Documents-Repos-simple-chatbot-and-mcp-server\\843e82d6-5c9e-45a4-85f2-5f96ba81e42c\\scratchpad"
     ]
   }
 }

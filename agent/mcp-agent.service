@@ -1,13 +1,16 @@
+# Template — __INSTALL_USER__/__INSTALL_HOME__ are substituted by
+# setup-agent-vm.sh at install time (sed, before copying to
+# /etc/systemd/system/). Don't `cp` this file directly; run the script.
 [Unit]
 Description=MCP Lab Agent
 After=network.target
 
 [Service]
 Type=simple
-User=labadmin
-WorkingDirectory=/home/labadmin/mcp-lab/agent
-EnvironmentFile=/home/labadmin/mcp-lab/agent/agent.env
-ExecStart=/home/labadmin/mcp-lab/agent/venv/bin/python3 app.py
+User=__INSTALL_USER__
+WorkingDirectory=__INSTALL_HOME__/mcp-lab/agent
+EnvironmentFile=__INSTALL_HOME__/mcp-lab/agent/agent.env
+ExecStart=__INSTALL_HOME__/mcp-lab/agent/venv/bin/python3 app.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

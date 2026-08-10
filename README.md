@@ -100,9 +100,13 @@ mcp-lab/
 
 ## Quick Start
 
-The setup scripts handle everything including GitHub SSH key generation and
-repo cloning. Bootstrap by downloading the script directly — the repo doesn't
-need to exist yet.
+The repo is public, so the setup scripts just clone it over plain HTTPS —
+no GitHub auth needed. Bootstrap by downloading the script directly — the
+repo doesn't need to exist locally yet. Run each script as the regular
+(non-root) user you want the service to run as; it `sudo`s only the specific
+steps that need it. That user becomes `INSTALL_USER` in the installed
+systemd unit — override it (and `INSTALL_HOME`) if you want the service to
+run as a different, already-existing user than the one running the script.
 
 ### 1 — mcphost (do this first)
 
@@ -112,8 +116,6 @@ curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-agent-mcp/main/s
 ```
 
 The script will:
-- Generate a GitHub deploy key and pause for you to add it at
-  `github.com/jswineinger/simple-agent-mcp/settings/keys`
 - Clone the repo to `~/mcp-lab`
 - Create the Python venv
 - Generate `mcp-server.env` with a random bearer token and pause so you can
@@ -135,7 +137,6 @@ curl -fsSL https://raw.githubusercontent.com/jswineinger/simple-agent-mcp/main/s
 ```
 
 The script will:
-- Generate a GitHub deploy key (add it to GitHub when prompted)
 - Clone the repo to `~/mcp-lab`
 - Create the Python venv
 - Set up `agent.env` and prompt you to paste in the `MCP_AUTH_TOKEN`
