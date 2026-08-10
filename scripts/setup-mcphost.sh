@@ -14,7 +14,9 @@
 #   3. Create Python venv for the MCP server
 #   4. Generate mcp-server.env with a bearer-token secret (copy this token
 #      into MCP_AUTH_TOKEN in agent.env on the agent VM)
-#   5. Install and enable the systemd service
+#   5. Install and enable the systemd service (does NOT start it — you
+#      start it yourself after reviewing mcp-server.env, see the note
+#      printed at the end)
 #
 # Run this as the regular (non-root) user you want the service to run as —
 # sudo is invoked only for the specific steps that need it (packages,
@@ -99,15 +101,7 @@ sed -e "s|__INSTALL_USER__|${INSTALL_USER}|g" -e "s|__INSTALL_HOME__|${INSTALL_H
     "${SERVER_DIR}/mcp-server.service" | sudo tee /etc/systemd/system/mcp-server.service > /dev/null
 sudo systemctl daemon-reload
 sudo systemctl enable mcp-server.service
-sudo systemctl start mcp-server.service
-
-sleep 1
-if sudo systemctl is-active --quiet mcp-server.service; then
-    echo "  mcp-server.service: running"
-else
-    echo "  WARNING: mcp-server.service did not start."
-    echo "  Check: sudo journalctl -u mcp-server -n 30"
-fi
+echo "  Service enabled (not started)."
 
 # ---------------------------------------------------------------------------
 # Done
@@ -115,9 +109,14 @@ fi
 echo ""
 echo "=== Setup complete ==="
 echo ""
-echo "  Logs : sudo journalctl -u mcp-server -f"
+echo "  Before starting: review/edit ${ENV_FILE}"
+echo "  (MCP_SERVER_PORT, AGENT_IP, MCPSERVER_IP, OLLAMA_URL, MCP_AUTH_TOKEN)."
 echo ""
-echo "  Self-test (replace TOKEN with the value from mcp-server.env):"
+echo "  Start  : sudo systemctl start mcp-server"
+echo "  Status : sudo systemctl status mcp-server"
+echo "  Logs   : sudo journalctl -u mcp-server -f"
+echo ""
+echo "  Self-test once started (replace TOKEN with the value from mcp-server.env):"
 echo "    curl -s http://localhost:8765/mcp \\"
 echo "      -H 'Authorization: Bearer TOKEN' -H 'Content-Type: application/json' \\"
 echo "      -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'"
