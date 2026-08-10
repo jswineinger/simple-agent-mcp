@@ -115,7 +115,7 @@ Two backends, fronted by `MCPRegistry` (`agent/mcp_registry.py`), which namespac
 All tool *definitions* are clean (no injection content in the schema itself) so `tools/list` scanning never blocks the tool catalog — only specific demo calls trip specific scanners, by design, so the block is attributable and repeatable.
 
 ### dlptest backend (HTTPS JSON-RPC 2.0 → public `mcp.dlptest.com` server)
-Toggle: `DLPTEST_ENABLED` (default on). Tools are **not defined in this repo** — discovered live via `tools/list` against the public dlptest MCP server at connect time (`agent/mcp_http_client.py`). Known tools used in testing include `echo_sensitive_data` (payload rides the agent→dlptest call args, which the AI Proxy never sees in this architecture — only the echoed *result* on the next AI-Proxy-mode turn) and `generate_prompt_context` (returns PII embedded in prose, RAG/context-style — pairs with the doc-upload feature and any future URL/RAG-style vectors).
+Toggle: `DLPTEST_ENABLED` (default off). Tools are **not defined in this repo** — discovered live via `tools/list` against the public dlptest MCP server at connect time (`agent/mcp_http_client.py`). Known tools used in testing include `echo_sensitive_data` (payload rides the agent→dlptest call args, which the AI Proxy never sees in this architecture — only the echoed *result* on the next AI-Proxy-mode turn) and `generate_prompt_context` (returns PII embedded in prose, RAG/context-style — pairs with the doc-upload feature and any future URL/RAG-style vectors).
 
 ---
 

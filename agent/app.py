@@ -39,7 +39,7 @@ Config via environment variables:
     MCP_AUTH_TOKEN     bearer token for mcp-server default: (none — required, see below)
 
     DLPTEST_MCP_URL    public dlptest MCP URL    default: https://mcp.dlptest.com/api/mcp/
-    DLPTEST_ENABLED    enable the dlptest backend default: true
+    DLPTEST_ENABLED    enable the dlptest backend default: false
     MCP_HTTP_TIMEOUT   HTTP MCP request timeout  default: 30
 """
 
@@ -197,7 +197,7 @@ MCP_AUTH_TOKEN = os.getenv("MCP_AUTH_TOKEN", "")
 # on a different host (verified against the running server — see
 # mcp_http_client.py's module docstring).
 DLPTEST_MCP_URL  = os.getenv("DLPTEST_MCP_URL", "https://mcp.dlptest.com/api/mcp/")
-DLPTEST_ENABLED  = os.getenv("DLPTEST_ENABLED", "true").lower() == "true"
+DLPTEST_ENABLED  = os.getenv("DLPTEST_ENABLED", "false").lower() == "true"
 MCP_HTTP_TIMEOUT = int(os.getenv("MCP_HTTP_TIMEOUT", "30"))
 
 if not VERIFY_TLS:

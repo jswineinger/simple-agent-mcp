@@ -33,7 +33,7 @@ INSTALL_HOME="${INSTALL_HOME:-$HOME}"
 
 REPO_DIR="${INSTALL_HOME}/${LOCAL_DIR_NAME}"
 AGENT_DIR="${REPO_DIR}/agent"
-MCPHOST="192.168.37.6"
+MCPHOST="127.0.0.1"
 
 echo "=== MCP Lab — Agent VM Setup ==="
 echo "  Installing as: ${INSTALL_USER} (home: ${INSTALL_HOME})"
@@ -100,9 +100,9 @@ echo "  Topology comment.)"
 # ---------------------------------------------------------------------------
 echo "[5/5] Installing systemd service..."
 sed -e "s|__INSTALL_USER__|${INSTALL_USER}|g" -e "s|__INSTALL_HOME__|${INSTALL_HOME}|g" \
-    "${AGENT_DIR}/mcp-agent.service" | sudo tee /etc/systemd/system/mcp-agent.service > /dev/null
+    "${AGENT_DIR}/llm-agent.service" | sudo tee /etc/systemd/system/llm-agent.service > /dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable mcp-agent.service
+sudo systemctl enable llm-agent.service
 echo "  Service enabled."
 
 # ---------------------------------------------------------------------------
@@ -111,9 +111,9 @@ echo "  Service enabled."
 echo ""
 echo "=== Setup complete ==="
 echo ""
-echo "  Start  : sudo systemctl start mcp-agent"
-echo "  Status : sudo systemctl status mcp-agent"
-echo "  Logs   : sudo journalctl -u mcp-agent -f"
-echo "  UI     : http://192.168.2.132:8000"
+echo "  Start  : sudo systemctl start llm-agent"
+echo "  Status : sudo systemctl status llm-agent"
+echo "  Logs   : sudo journalctl -u llm-agent -f"
+echo "  UI     : http://$(hostname -I | awk '{print $1}'):8000"
 echo ""
 echo "  NOTE: Run setup-mcphost.sh on mcp-server before starting the agent."
