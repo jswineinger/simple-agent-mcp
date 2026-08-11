@@ -8,47 +8,18 @@ Flask agent, a Python-native MCP client, and an MCP server exposing lab tools.
 
 ## Lab Inventory
 
-| Role | Host | IP |
-|------|------|----|
-| Agent + MCP client | agent | 192.168.2.132 |
-| MCP server + Ollama | mcphost | 192.168.37.6 |
-| AI proxy (Phase 2) | fortiaigate | 192.168.2.131:30443 |
+Four roles make up the lab:
 
-This table reflects this lab's current physical layout. The agent and
-mcp-server (and Ollama) don't have to live on separate hosts, or on these
-specific IPs — see **Topology** below.
+- **Agent + MCP client** — the Flask app (`agent/`)
+- **MCP server** — exposes lab tools over JSON-RPC/HTTP (`mcp-server/`)
+- **Ollama** — the local LLM (not part of this repo)
+- **AI Proxy** — the network AI-security gateway (Phase 2)
 
-## Architecture
+The AI Proxy is always a separate host. The other three can run on one box,
+split across several, or any mix in between — nothing in the code assumes a
+particular grouping. See **Topology** below.
 
-```
-+---------------------------+        +----------------------------+
-|  agent (192.168.2.132)    |        |  mcphost (192.168.37.6)   |
-|                            |  JSON- |                            |
-|  Flask app (app.py)       |  RPC/  |  mcp_server.py (Flask)     |
-|  MCP client                | HTTP  |  POST /mcp                 |
-|    (mcp_http_client.py)   |------->|  Bearer-token auth         |
-|                            |<-------|  get_system_info           |
-|                            |        |  list_ollama_models        |
-|                            |  HTTP  |  run_ping                  |
-|                            |------->|                            |
-|                            |<-------|                            |
-|                            |        |  Ollama / qwen2.5:14b      |
-+---------------------------+        +----------------------------+
-```
-
-The MCP server is LLM-agnostic — tools work identically whether the agent
-is talking to Ollama, Anthropic, or any OpenAI-compatible endpoint. Only the
-`OLLAMA_URL` and `API_KEY` in `agent/agent.env` change between backends.
-
-Agent <-> mcp-server speaks real JSON-RPC 2.0 MCP over HTTP — the same wire
-format and the same `HTTPMCPClient` class used for the public dlptest
-backend, just a different URL and token. Every request to mcp-server must
-carry `Authorization: Bearer <MCP_AUTH_TOKEN>`, checked in `mcp_server.py`
-before anything else runs. `setup-mcphost.sh` generates that token; copy it
-into `MCP_AUTH_TOKEN` in `agent.env` on the agent VM (`setup-agent-vm.sh`
-prompts for it).
-
-### Topology
+## Topology
 
 Both `.env.example` files declare the same three variables — `AGENT_IP`,
 `MCPSERVER_IP`, `OLLAMA_URL` — describing where each of the three
@@ -59,20 +30,54 @@ connections (e.g. mcp-server doesn't call the agent back, so `AGENT_IP` in
 `mcp-server.env` is informational only) — every var is still declared in
 both files so either one shows the full topology at a glance.
 
-To split across separate hosts — including this lab's actual layout in the
-table above — replace `127.0.0.1` with the real IP for whichever component
-moved, **in both `.env` files**:
+To split across separate hosts, replace `127.0.0.1` with the real IP for
+whichever component moved, **in both `.env` files**:
 
 ```bash
 # agent/agent.env
-MCPSERVER_IP=192.168.37.6
-OLLAMA_URL=http://192.168.37.6:11434
+MCPSERVER_IP=<mcp-server-ip>
+OLLAMA_URL=http://<ollama-ip>:11434
 
 # mcp-server/mcp-server.env
-OLLAMA_URL=http://192.168.37.6:11434
+OLLAMA_URL=http://<ollama-ip>:11434
 ```
 
 No code changes either way.
+
+## Architecture
+
+```
++----------------------------------------------------------------------------+
+|                             Agent + MCP client                             |
+|                              (Flask, app.py)                               |
++----------------------------------------------------------------------------+
+     JSON-RPC/HTTP,            HTTP/HTTPS                HTTPS,
+       bearer auth              (Direct)              AI-Proxy mode
+            |                       |                       |
+            v                       v                       v
++------------------------+   +--------------+   +------------------------+
+|       MCP server       |   |    Ollama    |   |        AI Proxy        |
+|    (mcp_server.py)     |   |              |   |       (always a        |
+|                        |   |              |   |     separate host)     |
+|       -> Ollama        |   |              |   |                        |
+|  (list_ollama_models,  |   |              |   |       -> Ollama        |
+|          HTTP)         |   |              |   |  (forwards requests)   |
++------------------------+   +--------------+   +------------------------+
+```
+
+Any of these four roles can be the same host or different hosts (except the
+AI Proxy, always separate — see **Topology** above). The MCP server is
+LLM-agnostic — tools work identically whether the agent is talking to
+Ollama, Anthropic, or any OpenAI-compatible endpoint. Only the `OLLAMA_URL`
+and `API_KEY` in `agent/agent.env` change between backends.
+
+Agent <-> mcp-server speaks real JSON-RPC 2.0 MCP over HTTP — the same wire
+format and the same `HTTPMCPClient` class used for the public dlptest
+backend, just a different URL and token. Every request to mcp-server must
+carry `Authorization: Bearer <MCP_AUTH_TOKEN>`, checked in `mcp_server.py`
+before anything else runs. `setup-mcphost.sh` generates that token; copy it
+into `MCP_AUTH_TOKEN` in `agent.env` on the agent VM (`setup-agent-vm.sh`
+prompts for it).
 
 ## Repository Structure
 
@@ -179,9 +184,9 @@ Review/edit `agent.env`:
 - `AI_PROXY_URL` — use the AI Proxy's **hostname**, not a bare IP (the proxy
   routes/matches by hostname, e.g. `https://myproxy.lab.local:30443/v1`).
   Add an `/etc/hosts` entry on this box if you don't have real DNS for it.
-- **Note:** `AI_PROXY_VALIDATION_ENABLED` defaults to `true` with
-  `AI_PROXY_VALIDATION_KEY=123456` — disable it or change the key to match
-  your proxy's actual configured value.
+- **Note:** `AI_PROXY_VALIDATION_ENABLED` defaults to `false`. If your AI
+  Proxy has API Key Validation turned on for its AI Flow, set it to `true`
+  and change `AI_PROXY_VALIDATION_KEY` (default `123456`) to match.
 
 Then start it, making sure `mcp-server` is already running:
 ```bash
@@ -197,7 +202,7 @@ Browse to `http://<agent-host>:8000` — the script prints the exact URL
 |--------|-----------|
 | "What's the system status on mcphost?" | `get_system_info` |
 | "What models are available in Ollama?" | `list_ollama_models` |
-| "Ping the AI Proxy at 192.168.2.131" | `run_ping` |
+| "Ping localhost" | `run_ping` |
 
 ## Phase 2 — Route Through the AI Proxy
 

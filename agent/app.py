@@ -180,7 +180,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY",  "")
 # changes the AI-Proxy-mode Authorization value from "Bearer ollama" to
 # "Bearer 123456", which is harmless while validation is off and correct
 # once it's on.
-AI_PROXY_VALIDATION_ENABLED = os.getenv("AI_PROXY_VALIDATION_ENABLED", "true").lower() in ("1", "true", "yes", "on")
+AI_PROXY_VALIDATION_ENABLED = os.getenv("AI_PROXY_VALIDATION_ENABLED", "false").lower() in ("1", "true", "yes", "on")
 AI_PROXY_VALIDATION_KEY     = os.getenv("AI_PROXY_VALIDATION_KEY", "123456")
 # Header the AI Proxy validates. Must match the AI Flow's "Custom
 # Authentication Header" field (default is Authorization).
