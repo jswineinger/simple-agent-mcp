@@ -103,6 +103,89 @@ mcp-lab/
 └── README.md
 ```
 
+## Features
+
+### Mode (Direct / AI Proxy) and Flow (Private / Public)
+
+Two independent toggles in the UI header, giving four combinations:
+
+| Mode | Flow | Goes to |
+|------|------|---------|
+| Direct | Private | Ollama, directly |
+| Direct | Public | Anthropic, directly |
+| AI Proxy | Private | AI Proxy's private flow → Ollama |
+| AI Proxy | Public | AI Proxy's public flow → Ollama (same backend as Private in this lab) |
+
+**Mode** decides whether a request is inspected by the AI Proxy on the way
+to the model or sent straight there — the whole point of this lab is
+comparing those two side by side. **Flow** decides which model family:
+Private always means Ollama; Public means Anthropic in Direct mode, or
+whatever the AI Proxy's "Public" AI-Flow is configured to forward to (also
+Ollama, in this lab). Switching either toggle is a pure UI action — no
+`.env` edit or service restart, ever. See **Phase 2** below to try it.
+
+### Public dlptest MCP server
+
+A second MCP backend, off by default (`DLPTEST_ENABLED=false` in
+`agent.env`), pointed at the public `mcp.dlptest.com` server. Unlike
+`mcphost`'s tools, these aren't defined in this repo — they're discovered
+live via `tools/list` against that public server at connect time, and
+exposed to the model namespaced as `dlptest__<toolname>`. They generate
+realistic-looking PII/DLP payloads (e.g. `echo_sensitive_data`,
+`generate_prompt_context`) for testing scanner coverage against a tool-call
+path outside this repo's own control. Set `DLPTEST_ENABLED=true` and
+restart `llm-agent` to turn it on.
+
+### AI Proxy API Key Validation
+
+A per-AI-Flow setting some AI Proxies support, independent of the upstream
+LLM key: it validates a header (default `Authorization`, or a custom one)
+against the proxy's own **Settings > API Keys** list before forwarding a
+request. Off by default (`AI_PROXY_VALIDATION_ENABLED=false` in
+`agent.env`) — turn it on and set `AI_PROXY_VALIDATION_KEY` (default
+`123456`) to match your proxy's configured value if your AI Proxy has this
+feature enabled on its AI Flow. `AI_PROXY_VALIDATION_HEADER` selects which
+header carries the key. Only ever fires in AI Proxy mode; Direct mode is
+completely untouched by these three variables.
+
+### Anthropic API key (Direct + Public mode)
+
+Set `ANTHROPIC_API_KEY` in `agent.env`. It's used for exactly one
+combination — Direct mode + Public flow — sent as the bearer token against
+`PUBLIC_LLM_URL` (default `https://api.anthropic.com/v1`) with model
+`PUBLIC_MODEL` (default `claude-sonnet-4-6`). Anthropic is currently the
+only Public-flow provider this lab is built/tested against; `PUBLIC_LLM_URL`
+and `PUBLIC_MODEL` are configurable if you want to point Direct+Public at a
+different OpenAI-compatible endpoint, but that combination isn't tested.
+
+### Attach a file
+
+Click the 📎 icon in the composer to attach a document — `.txt`/`.md`
+(plain text), `.pdf` (PyMuPDF), or `.docx` (python-docx, including table
+cells). Extraction happens server-side and the text is spliced into your
+message as RAG-style context, riding the same Mode/Flow routing (and the
+same AI Proxy inspection, in AI Proxy mode) as anything you type. Large
+documents truncate at ~24,000 characters, with truncation state shown in
+the UI. The extracted text is never sent back to the browser — the client
+only ever holds an opaque reference to it, resolved back to real text
+server-side on each later turn.
+
+### Shortcut query buttons
+
+Eight one-click prompt chips below the chat log — clicking one sends it
+immediately, as if you'd typed and submitted it:
+
+| Chip | Purpose |
+|------|---------|
+| Benign question | Ordinary question, no security angle — a control |
+| Prompt injection | Direct "ignore previous instructions" attempt |
+| Extract secret | Asks the model to reveal its configuration/keys |
+| Generate PII | Asks for fabricated but realistic SSN/card data |
+| Benign question (Spanish) | Same benign control, non-English |
+| System info | Triggers the `get_system_info` MCP tool |
+| List models | Triggers the `list_ollama_models` MCP tool |
+| Poisoned result | Triggers `check_lab_license`, whose result carries a planted injection payload |
+
 ## Quick Start
 
 Starting from a clean Ubuntu VM. The repo is public, so the setup scripts
