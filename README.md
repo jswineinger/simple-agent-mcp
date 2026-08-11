@@ -178,10 +178,10 @@ immediately, as if you'd typed and submitted it:
 | Chip | Purpose |
 |------|---------|
 | Benign question | Ordinary question, no security angle — a control |
+| Benign question (Spanish) | Same benign control, non-English |
 | Prompt injection | Direct "ignore previous instructions" attempt |
 | Extract secret | Asks the model to reveal its configuration/keys |
 | Generate PII | Asks for fabricated but realistic SSN/card data |
-| Benign question (Spanish) | Same benign control, non-English |
 | System info | Triggers the `get_system_info` MCP tool |
 | List models | Triggers the `list_ollama_models` MCP tool |
 | Poisoned result | Triggers `check_lab_license`, whose result carries a planted injection payload |
